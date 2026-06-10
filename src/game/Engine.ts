@@ -101,11 +101,13 @@ export class GameEngine {
     this.onEvent = onEvent;
     this.lastTs = performance.now();
     this.rafId = requestAnimationFrame(this.loop);
+    this.sound.startMusic();
     this.publishUi();
   }
 
   destroy(): void {
     cancelAnimationFrame(this.rafId);
+    this.sound.dispose();
     this.ctx = null;
   }
 

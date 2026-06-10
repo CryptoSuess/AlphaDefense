@@ -63,17 +63,41 @@ Desktop niceties: hover previews tower range before placing, **Space** pauses,
 | Sniper    | Fast; 30% chance to dodge direct hits     |
 | FUD Beast | Boss every 5th wave; costs 10 lives       |
 
+## Sound
+
+All audio is **synthesized live with the Web Audio API** — zero audio assets,
+nothing to download. Each effect (shots, splashes, kills, leak alarms, boss
+growl, fanfares) is built from enveloped oscillators and noise bursts in
+`src/game/sound.ts`, plus a quiet ambient bass loop under the action. The HUD
+speaker button toggles everything (persisted). To use recorded SFX later,
+replace the matching case in `synthesize()` — engine call sites don't change.
+
+## Web3 (groundwork)
+
+Feature-flagged in `src/data/features.ts`:
+
+- **Connect Wallet** (on by default): dependency-free EIP-1193 integration in
+  `src/utils/wallet.ts` — works with Coinbase Wallet, MetaMask or any injected
+  provider and switches/adds the **Base** chain (8453). Connection state shows
+  on the start screen. Nothing on-chain is required to play.
+- **Pack Records** (on by default): local best-score table on the start
+  screen, reading the same data a global leaderboard will serve later.
+
+Flip a flag to `false` to ship without that surface.
+
 ## Project structure
 
 ```
 src/
   components/   React UI (start screen, HUD, build bar, overlays)
   game/         Canvas engine: Engine, Enemy, Tower, Projectile,
-                renderer (placeholder vector art), sprites registry, sound stub
+                renderer (placeholder vector art), sprites registry,
+                WebAudio sound synth
   assets/       Art drop-zone + sprite key documentation
-  data/         Balance tables: towers, enemies, waves, map, difficulty, copy
-  hooks/        React <-> engine bridge, high scores
-  utils/        math, localStorage, future integration stubs
+  data/         Balance tables: towers, enemies, waves, maps, difficulty,
+                copy, feature flags
+  hooks/        React <-> engine bridge, high scores, wallet state
+  utils/        math, localStorage, wallet (EIP-1193), integration seams
   types/        Shared TypeScript types
 ```
 
@@ -89,13 +113,14 @@ Design notes:
 
 ## Future-ready seams (`src/utils/integrations.ts`)
 
-- **Wallet connect** — `WalletProvider` stub, ready for wagmi/viem on Base.
+- **Wallet connect** — live (injected EIP-1193 on Base); swap
+  `src/utils/wallet.ts` for wagmi/viem when richer on-chain reads are needed.
 - **Leaderboard** — `LeaderboardProvider` interface with a local-storage
-  implementation; swap in an API client later.
+  implementation (powers the Pack Records panel); swap in an API client later.
 - **NFT skin unlocks** — `SkinProvider` feeds key→URL overrides into the
-  sprite registry.
+  sprite registry (flag off until skins exist).
 - **Weekly tournament** — `TournamentProvider` supplies a shared weekly seed
-  for identical wave schedules.
+  for identical wave schedules (flag off until a backend exists).
 - **Telegram sharing** — already live on the end screen via `t.me/share`.
 
 ---

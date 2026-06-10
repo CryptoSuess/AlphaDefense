@@ -13,6 +13,7 @@
  */
 import type { DifficultyId, MapId } from '../types';
 import { loadHighScores, submitHighScore } from './storage';
+import { connectWallet, disconnectWallet, getAddress as getWalletAddress } from './wallet';
 
 // ---------------------------------------------------------------------------
 // Wallet (future)
@@ -23,14 +24,18 @@ export interface WalletProvider {
   getAddress(): string | null;
 }
 
-/** TODO: replace with wagmi/viem (Base chain) implementation. */
+/**
+ * Backed by the dependency-free injected-wallet implementation in wallet.ts
+ * (EIP-1193, switches to Base). Swap for wagmi/viem when richer on-chain
+ * features are needed — this interface stays put.
+ */
 export const wallet: WalletProvider = {
   async connect() {
-    console.info('[NIKO] Wallet connect coming soon.');
-    return null;
+    const address = await connectWallet();
+    return address ? { address } : null;
   },
-  async disconnect() {},
-  getAddress: () => null,
+  disconnect: disconnectWallet,
+  getAddress: getWalletAddress,
 };
 
 // ---------------------------------------------------------------------------

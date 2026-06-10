@@ -40,7 +40,7 @@ export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onQuit }: Prop
         <IconButton
           onClick={onSound}
           label={ui.soundOn ? '🔊' : '🔇'}
-          title="Toggle sound (audio coming soon)"
+          title="Toggle sound & music"
         />
         <IconButton
           onClick={onPause}
