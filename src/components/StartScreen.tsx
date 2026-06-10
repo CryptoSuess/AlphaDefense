@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { COPY } from '../data/copy';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../data/difficulty';
+import { FEATURES } from '../data/features';
 import { GRID_COLS, GRID_ROWS, MAPS, MAP_ORDER } from '../data/map';
 import type { DifficultyId, MapId } from '../types';
 import { scoreKey, type HighScores } from '../utils/storage';
+import { shortAddress } from '../utils/wallet';
+import { useWallet } from '../hooks/useWallet';
 import { NikoLogo } from './NikoLogo';
 
 interface Props {
@@ -24,6 +27,7 @@ export function StartScreen({ highScores, onStart }: Props) {
           {COPY.title}
         </h1>
         <p className="text-sm text-niko-ice sm:text-base">{COPY.subtitle}</p>
+        {FEATURES.wallet && <WalletButton />}
       </div>
 
       {/* Map selection */}
@@ -116,8 +120,82 @@ export function StartScreen({ highScores, onStart }: Props) {
         </ul>
       </div>
 
+      {FEATURES.leaderboard && <PackRecords highScores={highScores} />}
+
       <p className="text-center text-xs text-slate-500">
-        Wallet connect, leaderboards, NFT skins &amp; weekly tournaments — coming soon.
+        Global leaderboards, NFT skins &amp; weekly tournaments — coming soon.
+      </p>
+    </div>
+  );
+}
+
+/** Connect/disconnect button for an injected wallet (Base chain). */
+function WalletButton() {
+  const { address, connecting, available, connect, disconnect } = useWallet();
+
+  if (address) {
+    return (
+      <button
+        onClick={() => disconnect()}
+        title="Disconnect"
+        className="mt-1 flex items-center gap-2 rounded-full border border-niko-blue bg-niko-panel px-4 py-1.5 text-xs font-bold text-niko-ice hover:border-red-400"
+      >
+        <span className="inline-block h-2 w-2 rounded-full bg-green-400" aria-hidden />
+        {shortAddress(address)} · Base
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={connect}
+      disabled={connecting || !available}
+      title={available ? 'Connect an injected wallet (Base)' : 'No wallet extension detected'}
+      className={`mt-1 rounded-full border px-4 py-1.5 text-xs font-bold transition ${
+        available
+          ? 'border-niko-line bg-niko-navy text-niko-ice hover:border-niko-electric'
+          : 'cursor-not-allowed border-niko-line bg-niko-navy text-slate-500'
+      }`}
+    >
+      {connecting ? 'Connecting…' : available ? '🔗 Connect Wallet' : 'No Wallet Detected'}
+    </button>
+  );
+}
+
+/**
+ * Local best-score table ("Pack Records"). Reads the same data the future
+ * global leaderboard will serve — swapping in the API is a data-source change.
+ */
+function PackRecords({ highScores }: { highScores: HighScores }) {
+  const rows = Object.entries(highScores)
+    .flatMap(([key, score]) => {
+      if (score === undefined) return [];
+      const [map, diff] = key.split(':') as [MapId, DifficultyId];
+      if (!MAPS[map] || !DIFFICULTIES[diff]) return [];
+      return [{ map, diff, score }];
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  if (rows.length === 0) return null;
+  return (
+    <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-niko-glow">
+        Pack Records
+      </h2>
+      <table className="w-full text-sm">
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={`${r.map}:${r.diff}`} className="border-t border-niko-line/50 first:border-t-0">
+              <td className="py-1 pr-2 text-slate-500">{i + 1}.</td>
+              <td className="py-1">{MAPS[r.map].def.name}</td>
+              <td className="py-1 text-slate-400">{DIFFICULTIES[r.diff].name}</td>
+              <td className="py-1 text-right font-bold tabular-nums text-yellow-300">{r.score}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2 text-[11px] text-slate-500">
+        Saved on this device. Global leaderboard coming soon.
       </p>
     </div>
   );
