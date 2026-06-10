@@ -1,6 +1,6 @@
 import { COPY } from '../data/copy';
 import { DIFFICULTIES } from '../data/difficulty';
-import { TILE, isBuildableCell } from '../data/map';
+import { MAPS, TILE, type GameMap } from '../data/map';
 import { TOWERS } from '../data/towers';
 import {
   TOTAL_WAVES,
@@ -14,6 +14,7 @@ import type {
   DifficultyId,
   GameEvent,
   GameStatus,
+  MapId,
   SpawnEntry,
   TowerTypeId,
   UiState,
@@ -46,6 +47,13 @@ export class GameEngine {
   /** Game-time clock in seconds (pauses with the game). */
   now = 0;
   timeScale = 1;
+  /** True after the player chose to keep playing past the wave-25 victory. */
+  endless = false;
+  /** Screen-shake intensity in px, decays each frame. */
+  shake = 0;
+  /** Game time of the last Vault hit (renderer flashes the vault briefly). */
+  lastVaultHit = -10;
+  readonly map: GameMap;
 
   // --- interaction state ----------------------------------------------------
   selectedTowerType: TowerTypeId | null = null;
@@ -66,7 +74,11 @@ export class GameEngine {
   private onUiState: (s: UiState) => void = () => {};
   private onEvent: (e: GameEvent) => void = () => {};
 
-  constructor(readonly difficulty: DifficultyId) {
+  constructor(
+    readonly difficulty: DifficultyId,
+    mapId: MapId = 'vaultRun',
+  ) {
+    this.map = MAPS[mapId];
     const diff = DIFFICULTIES[difficulty];
     this.paws = diff.startingPaws;
     this.lives = diff.startingLives;
@@ -128,9 +140,14 @@ export class GameEngine {
       this.waveClock += dt;
       while (this.spawnQueue.length > 0 && this.spawnQueue[0].time <= this.waveClock) {
         const entry = this.spawnQueue.shift()!;
-        this.enemies.push(new Enemy(entry.type, this.hpMultBase * waveHpMult(this.wave)));
+        this.enemies.push(
+          new Enemy(entry.type, this.hpMultBase * waveHpMult(this.wave), this.map),
+        );
       }
     }
+
+    // Screen shake decays quickly.
+    this.shake = Math.max(0, this.shake - this.shake * 7 * dt - 2 * dt);
 
     // Move enemies; handle leaks.
     for (const e of this.enemies) {
@@ -138,6 +155,8 @@ export class GameEngine {
       const leaked = e.update(dt, this.now);
       if (leaked) {
         this.lives -= e.def.livesCost;
+        this.lastVaultHit = this.now;
+        this.shake = Math.min(this.shake + (e.def.boss ? 14 : 6), 18);
         this.sound.play('leak');
         this.emit({ kind: 'toast', text: COPY.vaultHit, tone: 'danger' });
         if (this.lives <= 0) {
@@ -159,6 +178,7 @@ export class GameEngine {
       if (!target) continue;
       t.angle = Math.atan2(target.y - t.y, target.x - t.x);
       t.cooldown = 1 / t.stats.fireRate;
+      t.lastShot = this.now;
       this.projectiles.push(new Projectile(t, target));
       this.sound.play(t.stats.splashRadius ? 'splash' : 'shoot');
     }
@@ -183,7 +203,9 @@ export class GameEngine {
       const bonus = Math.round(waveClearBonus(this.wave) * this.rewardMult);
       this.paws += bonus;
       this.score += waveClearScore(this.wave);
-      if (this.wave >= TOTAL_WAVES) {
+      // Victory fires once, at the end of the campaign; in endless mode the
+      // run only ends when the Vault falls.
+      if (this.wave >= TOTAL_WAVES && !this.endless) {
         this.endGame('victory');
         return;
       }
@@ -237,8 +259,13 @@ export class GameEngine {
     this.paws += reward;
     this.score += e.def.score;
     this.particles.push(text(e.x, e.y, `+${reward}🐾`, '#facc15'));
+    // Death burst: a ring plus sparks in the enemy's color.
+    this.particles.push(ring(e.x, e.y, e.def.radius + 10, e.def.color));
+    const sparkCount = e.def.boss ? 14 : 6;
+    for (let i = 0; i < sparkCount; i++) this.particles.push(spark(e.x, e.y, e.def.color));
     this.sound.play('kill');
     if (e.def.boss) {
+      this.shake = Math.min(this.shake + 10, 18);
       this.emit({ kind: 'toast', text: COPY.bossDown, tone: 'success' });
     }
     if (this.selectedTowerId === null) this.uiTimer = 1; // refresh paws promptly
@@ -258,7 +285,7 @@ export class GameEngine {
 
   startNextWave(): void {
     if (this.status !== 'playing' || this.waveInProgress) return;
-    if (this.wave >= TOTAL_WAVES) return;
+    if (this.wave >= TOTAL_WAVES && !this.endless) return;
     this.wave += 1;
     this.spawnQueue = buildWave(this.wave);
     this.waveClock = 0;
@@ -270,6 +297,16 @@ export class GameEngine {
       text: boss ? COPY.bossWave : COPY.waveStart(this.wave),
       tone: boss ? 'danger' : 'info',
     });
+    this.publishUi();
+  }
+
+  /** Continues a victorious run into endless mode (waves keep coming). */
+  continueEndless(): void {
+    if (this.status !== 'victory') return;
+    this.endless = true;
+    this.status = 'playing';
+    this.lastTs = performance.now();
+    this.emit({ kind: 'toast', text: COPY.endlessStart, tone: 'info' });
     this.publishUi();
   }
 
@@ -322,7 +359,7 @@ export class GameEngine {
 
   placeTower(type: TowerTypeId, col: number, row: number): boolean {
     if (this.status !== 'playing') return false;
-    if (!isBuildableCell(col, row)) return false;
+    if (!this.map.isBuildable(col, row)) return false;
     if (this.towers.some((t) => t.col === col && t.row === row)) return false;
     const cost = TOWERS[type].levels[0].cost;
     if (this.paws < cost) {
@@ -400,6 +437,7 @@ export class GameEngine {
       totalWaves: TOTAL_WAVES,
       waveInProgress: this.waveInProgress,
       nextWaveIsBoss: isBossWave(this.wave + 1),
+      endless: this.endless,
       selectedTowerType: this.selectedTowerType,
       selectedTower: sel ? sel.snapshot() : null,
       timeScale: this.timeScale,

@@ -12,10 +12,21 @@ interface Props {
   isRecord: boolean;
   onRetry: () => void;
   onMenu: () => void;
+  /** Present only on the campaign victory screen: continue into endless mode. */
+  onContinueEndless?: () => void;
 }
 
 /** Game over / victory overlay with score, share button and replay actions. */
-export function EndScreen({ status, score, wave, difficulty, isRecord, onRetry, onMenu }: Props) {
+export function EndScreen({
+  status,
+  score,
+  wave,
+  difficulty,
+  isRecord,
+  onRetry,
+  onMenu,
+  onContinueEndless,
+}: Props) {
   const victory = status === 'victory';
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-niko-deep/90 p-4">
@@ -40,6 +51,15 @@ export function EndScreen({ status, score, wave, difficulty, isRecord, onRetry, 
           <div className="rounded-full bg-yellow-500/20 px-4 py-1 text-sm font-bold text-yellow-300">
             ★ New personal best — Diamond Paws Activated!
           </div>
+        )}
+
+        {victory && onContinueEndless && (
+          <button
+            onClick={onContinueEndless}
+            className="w-full rounded-xl bg-gradient-to-r from-niko-blue to-niko-flame px-4 py-3 font-bold shadow-glow transition hover:brightness-110"
+          >
+            {COPY.endlessButton}
+          </button>
         )}
 
         <div className="flex w-full flex-col gap-2 sm:flex-row">

@@ -1,28 +1,52 @@
-import type { DifficultyId } from '../types';
+import type { DifficultyId, MapId } from '../types';
 
 /**
  * LocalStorage wrapper for persisted data (high scores, sound preference).
  * All access goes through here so a backend can replace it later.
  */
-const SCORES_KEY = 'niko-td:high-scores';
+const SCORES_KEY = 'niko-td:high-scores:v2';
+const LEGACY_SCORES_KEY = 'niko-td:high-scores';
 const SOUND_KEY = 'niko-td:sound';
 
-export type HighScores = Partial<Record<DifficultyId, number>>;
+/** Scores keyed by "mapId:difficulty". */
+export type HighScores = Partial<Record<string, number>>;
+
+export function scoreKey(map: MapId, difficulty: DifficultyId): string {
+  return `${map}:${difficulty}`;
+}
 
 export function loadHighScores(): HighScores {
   try {
     const raw = localStorage.getItem(SCORES_KEY);
-    return raw ? (JSON.parse(raw) as HighScores) : {};
+    if (raw) return JSON.parse(raw) as HighScores;
+    // One-time migration: v1 scores were keyed by difficulty only and all
+    // belonged to the original Vault Run map.
+    const legacy = localStorage.getItem(LEGACY_SCORES_KEY);
+    if (legacy) {
+      const old = JSON.parse(legacy) as Partial<Record<DifficultyId, number>>;
+      const migrated: HighScores = {};
+      for (const [diff, score] of Object.entries(old)) {
+        migrated[scoreKey('vaultRun', diff as DifficultyId)] = score;
+      }
+      localStorage.setItem(SCORES_KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+    return {};
   } catch {
     return {};
   }
 }
 
 /** Saves a score if it beats the stored one. Returns true on a new record. */
-export function submitHighScore(difficulty: DifficultyId, score: number): boolean {
+export function submitHighScore(
+  map: MapId,
+  difficulty: DifficultyId,
+  score: number,
+): boolean {
   const scores = loadHighScores();
-  if ((scores[difficulty] ?? 0) >= score) return false;
-  scores[difficulty] = score;
+  const key = scoreKey(map, difficulty);
+  if ((scores[key] ?? 0) >= score) return false;
+  scores[key] = score;
   try {
     localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
   } catch {

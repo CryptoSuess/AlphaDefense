@@ -18,6 +18,8 @@ export class Tower {
   cooldown = 0;
   /** Facing angle, for rendering. */
   angle = 0;
+  /** Game time of the last shot (renderer uses it for recoil/muzzle flash). */
+  lastShot = -10;
   readonly x: number;
   readonly y: number;
 

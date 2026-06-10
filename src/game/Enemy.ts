@@ -1,13 +1,13 @@
 import { ENEMIES } from '../data/enemies';
-import { WAYPOINTS_PX } from '../data/map';
+import type { GameMap } from '../data/map';
 import type { EnemyDef, EnemyTypeId } from '../types';
 
 let nextId = 1;
 
 /**
  * A live enemy walking the path toward the Base Vault.
- * Movement follows the waypoint polyline; status effects (slow/burn) are
- * applied by projectile hits and ticked each frame.
+ * Movement follows the map's waypoint polyline; status effects (slow/burn)
+ * are applied by projectile hits and ticked each frame.
  */
 export class Enemy {
   readonly id = nextId++;
@@ -16,6 +16,8 @@ export class Enemy {
   y: number;
   hp: number;
   maxHp: number;
+  /** Heading in radians (for rendering facing/rotation). */
+  angle = 0;
   /** Distance travelled along the path; used for "closest to vault" targeting. */
   progress = 0;
   /** Index of the waypoint currently being walked toward. */
@@ -30,11 +32,14 @@ export class Enemy {
   burnDps = 0;
   burnUntil = 0;
 
-  constructor(type: EnemyTypeId, hpMult: number) {
+  private readonly waypoints: Array<[number, number]>;
+
+  constructor(type: EnemyTypeId, hpMult: number, map: GameMap) {
     this.def = ENEMIES[type];
     this.maxHp = Math.round(this.def.hp * hpMult);
     this.hp = this.maxHp;
-    [this.x, this.y] = WAYPOINTS_PX[0];
+    this.waypoints = map.waypointsPx;
+    [this.x, this.y] = this.waypoints[0];
   }
 
   /** Advances along the path. Returns true if the enemy leaked this frame. */
@@ -46,9 +51,10 @@ export class Enemy {
     if (now >= this.slowUntil) this.slowFactor = 1;
 
     let move = this.def.speed * this.slowFactor * dt;
-    while (move > 0 && this.seg < WAYPOINTS_PX.length) {
-      const [tx, ty] = WAYPOINTS_PX[this.seg];
+    while (move > 0 && this.seg < this.waypoints.length) {
+      const [tx, ty] = this.waypoints[this.seg];
       const d = Math.hypot(tx - this.x, ty - this.y);
+      this.angle = Math.atan2(ty - this.y, tx - this.x);
       if (d <= move) {
         this.x = tx;
         this.y = ty;
@@ -62,7 +68,7 @@ export class Enemy {
         move = 0;
       }
     }
-    if (this.seg >= WAYPOINTS_PX.length) {
+    if (this.seg >= this.waypoints.length) {
       this.leaked = true;
       this.dead = true;
       return true;

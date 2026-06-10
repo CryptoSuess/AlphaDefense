@@ -13,9 +13,12 @@ export function isBossWave(wave: number): boolean {
 /**
  * Enemy HP multiplier for a wave (difficulty multiplier applied separately).
  * Linear ramp plus a gentle exponential so late waves stay threatening.
+ * Past the campaign (endless mode) the ramp steepens so every run ends.
  */
 export function waveHpMult(wave: number): number {
-  return (1 + 0.12 * (wave - 1)) * Math.pow(1.04, wave - 1);
+  const base = (1 + 0.12 * (wave - 1)) * Math.pow(1.04, wave - 1);
+  const endlessExtra = wave > TOTAL_WAVES ? Math.pow(1.06, wave - TOTAL_WAVES) : 1;
+  return base * endlessExtra;
 }
 
 /** Paws awarded for clearing a wave. */

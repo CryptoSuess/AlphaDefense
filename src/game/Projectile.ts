@@ -10,6 +10,9 @@ import type { Tower } from './Tower';
 export class Projectile {
   x: number;
   y: number;
+  /** Position one frame ago, used by the renderer to draw a motion trail. */
+  prevX: number;
+  prevY: number;
   targetX: number;
   targetY: number;
   done = false;
@@ -22,6 +25,8 @@ export class Projectile {
   ) {
     this.x = tower.x;
     this.y = tower.y;
+    this.prevX = tower.x;
+    this.prevY = tower.y;
     this.stats = tower.stats;
     this.color = tower.def.color;
     this.targetX = target?.x ?? tower.x;
@@ -30,6 +35,8 @@ export class Projectile {
 
   /** Moves toward the target. Returns true when it arrives (impact). */
   update(dt: number): boolean {
+    this.prevX = this.x;
+    this.prevY = this.y;
     if (this.target && !this.target.dead) {
       this.targetX = this.target.x;
       this.targetY = this.target.y;

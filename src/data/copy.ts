@@ -26,6 +26,9 @@ export const COPY = {
   gameOverBody: 'FUD overran the trenches. Regroup the Pack and try again.',
   victoryTitle: 'The Pack Holds!',
   victoryBody: 'All 25 waves repelled. NIKO stands guard — Base is safe.',
+  endlessStart: 'Endless mode — how long can the Pack hold?',
+  endlessButton: 'Keep Defending — Endless',
+  mapHeading: 'Choose Your Battlefield',
   pause: 'Pause',
   resume: 'Resume',
 } as const;

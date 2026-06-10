@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CANVAS_H, CANVAS_W } from '../data/map';
-import type { DifficultyId, GameEvent } from '../types';
+import type { DifficultyId, GameEvent, MapId } from '../types';
 import { useGameEngine } from '../hooks/useGameEngine';
 import { EndScreen } from './EndScreen';
 import { Hud } from './Hud';
@@ -10,10 +10,11 @@ import { Toasts, type ToastItem } from './Toasts';
 
 interface Props {
   difficulty: DifficultyId;
+  mapId: MapId;
   onQuit: () => void;
   onRetry: () => void;
   /** Returns true if this run set a new personal best. */
-  submitScore: (difficulty: DifficultyId, score: number) => boolean;
+  submitScore: (map: MapId, difficulty: DifficultyId, score: number) => boolean;
 }
 
 let toastId = 0;
@@ -23,7 +24,7 @@ let toastId = 0;
  * Pointer events are translated from CSS pixels to logical canvas
  * coordinates so the same code path serves mouse and touch.
  */
-export function GameScreen({ difficulty, onQuit, onRetry, submitScore }: Props) {
+export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [ended, setEnded] = useState<{
@@ -40,14 +41,14 @@ export function GameScreen({ difficulty, onQuit, onRetry, submitScore }: Props) 
         setToasts((ts) => [...ts.slice(-2), item]);
         setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== item.id)), 2600);
       } else if (e.kind === 'ended') {
-        const isRecord = submitScore(difficulty, e.score);
+        const isRecord = submitScore(mapId, difficulty, e.score);
         setEnded({ status: e.status, score: e.score, wave: e.wave, isRecord });
       }
     },
-    [difficulty, submitScore],
+    [difficulty, mapId, submitScore],
   );
 
-  const { engine, ui } = useGameEngine(difficulty, canvasRef, handleEvent);
+  const { engine, ui } = useGameEngine(difficulty, mapId, canvasRef, handleEvent);
 
   /** Converts a pointer event into logical canvas coordinates. */
   const toLogical = (ev: React.PointerEvent<HTMLCanvasElement>): [number, number] => {
@@ -113,6 +114,14 @@ export function GameScreen({ difficulty, onQuit, onRetry, submitScore }: Props) 
             isRecord={ended.isRecord}
             onRetry={onRetry}
             onMenu={onQuit}
+            onContinueEndless={
+              ended.status === 'victory'
+                ? () => {
+                    engine.continueEndless();
+                    setEnded(null);
+                  }
+                : undefined
+            }
           />
         )}
       </div>

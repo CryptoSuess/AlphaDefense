@@ -11,7 +11,7 @@
  *  - Weekly tournament: `TournamentProvider` supplies a seeded wave schedule
  *    so every player faces identical waves for the week.
  */
-import type { DifficultyId } from '../types';
+import type { DifficultyId, MapId } from '../types';
 import { loadHighScores, submitHighScore } from './storage';
 
 // ---------------------------------------------------------------------------
@@ -39,6 +39,7 @@ export const wallet: WalletProvider = {
 export interface LeaderboardEntry {
   player: string;
   score: number;
+  map: MapId;
   difficulty: DifficultyId;
 }
 
@@ -50,13 +51,14 @@ export interface LeaderboardProvider {
 /** Local stand-in until a backend exists. */
 export const leaderboard: LeaderboardProvider = {
   async submit(entry) {
-    submitHighScore(entry.difficulty, entry.score);
+    submitHighScore(entry.map, entry.difficulty, entry.score);
   },
   async top() {
     const scores = loadHighScores();
-    return (Object.entries(scores) as Array<[DifficultyId, number]>).map(
-      ([difficulty, score]) => ({ player: 'You', score, difficulty }),
-    );
+    return Object.entries(scores).flatMap(([key, score]) => {
+      const [map, difficulty] = key.split(':') as [MapId, DifficultyId];
+      return score !== undefined ? [{ player: 'You', score, map, difficulty }] : [];
+    });
   },
 };
 

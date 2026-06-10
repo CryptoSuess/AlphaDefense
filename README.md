@@ -28,13 +28,17 @@ npm run preview  # serve the production build locally
 
 ## How to play
 
-1. Pick a difficulty (Pup / Guardian / Alpha Wolf) and press **Defend the Chain**.
+1. Pick a battlefield (Vault Run / The Gauntlet / FUD Spiral) and a difficulty
+   (Pup / Guardian / Alpha Wolf), then press **Defend the Chain**.
 2. Press **Start Wave** to send in the next wave (Enter also works).
 3. Tap a tower card in the build bar, then tap any open tile to place it.
 4. Towers fire automatically; kills earn **Paws 🐾**.
 5. Tap a placed tower to **upgrade** (2 upgrade tiers) or **sell** (70% refund).
 6. Every 5th wave a **FUD Beast** boss enters the trenches.
 7. Survive all **25 waves** to win. If the Vault's health hits zero, game over.
+8. After victory, choose **Keep Defending — Endless** to push past wave 25.
+   Scaling steepens each endless wave, so every run eventually ends — chase
+   the high score (saved per map + difficulty).
 
 Desktop niceties: hover previews tower range before placing, **Space** pauses,
 **Enter** starts the next wave. The **2x** button fast-forwards.

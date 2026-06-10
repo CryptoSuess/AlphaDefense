@@ -17,10 +17,16 @@ export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onQuit }: Prop
       <Stat icon="❤️" label="Vault" value={`${ui.lives}/${ui.maxLives}`} warn={ui.lives <= 5} />
       <Stat icon="🐾" label="Paws" value={String(ui.paws)} />
       <Stat icon="⭐" label="Score" value={String(ui.score)} />
-      <Stat icon="🌊" label="Wave" value={`${ui.wave}/${ui.totalWaves}`} />
+      <Stat
+        icon="🌊"
+        label="Wave"
+        value={ui.endless ? `${ui.wave} ∞` : `${ui.wave}/${ui.totalWaves}`}
+      />
 
       <div className="ml-auto flex items-center gap-2">
-        {!ui.waveInProgress && ui.status === 'playing' && ui.wave < ui.totalWaves && (
+        {!ui.waveInProgress &&
+          ui.status === 'playing' &&
+          (ui.endless || ui.wave < ui.totalWaves) && (
           <button
             onClick={onStartWave}
             className={`animate-pulse rounded-lg px-3 py-1.5 font-bold ${
@@ -29,7 +35,7 @@ export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onQuit }: Prop
           >
             {ui.nextWaveIsBoss ? '⚠ Boss Wave' : `Start Wave ${ui.wave + 1}`}
           </button>
-        )}
+          )}
         <IconButton onClick={onSpeed} label={`${ui.timeScale}x`} title="Toggle game speed" />
         <IconButton
           onClick={onSound}

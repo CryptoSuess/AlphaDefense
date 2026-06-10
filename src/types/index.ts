@@ -17,6 +17,9 @@ export type EnemyTypeId = 'jeet' | 'rugger' | 'bot' | 'sniper' | 'fudBeast';
 /** Difficulty presets selectable on the start screen. */
 export type DifficultyId = 'pup' | 'guardian' | 'alpha';
 
+/** Battlefield maps selectable on the start screen. */
+export type MapId = 'vaultRun' | 'gauntlet' | 'fudSpiral';
+
 /** High level game status driven by the engine. */
 export type GameStatus = 'playing' | 'paused' | 'gameover' | 'victory';
 
@@ -128,6 +131,8 @@ export interface UiState {
   waveInProgress: boolean;
   /** Whether the upcoming wave is a FUD Beast boss wave. */
   nextWaveIsBoss: boolean;
+  /** True once the player chose to keep going after the wave-25 victory. */
+  endless: boolean;
   selectedTowerType: TowerTypeId | null;
   selectedTower: TowerSnapshot | null;
   timeScale: number;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/Engine';
-import type { DifficultyId, GameEvent, UiState } from '../types';
+import type { DifficultyId, GameEvent, MapId, UiState } from '../types';
 import { DIFFICULTIES } from '../data/difficulty';
 import { TOTAL_WAVES } from '../data/waves';
 
@@ -11,12 +11,13 @@ import { TOTAL_WAVES } from '../data/waves';
  */
 export function useGameEngine(
   difficulty: DifficultyId,
+  mapId: MapId,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   onEvent: (e: GameEvent) => void,
 ) {
   const engineRef = useRef<GameEngine | null>(null);
   if (engineRef.current === null) {
-    engineRef.current = new GameEngine(difficulty);
+    engineRef.current = new GameEngine(difficulty, mapId);
   }
   const engine = engineRef.current;
 
@@ -31,6 +32,7 @@ export function useGameEngine(
     totalWaves: TOTAL_WAVES,
     waveInProgress: false,
     nextWaveIsBoss: false,
+    endless: false,
     selectedTowerType: null,
     selectedTower: null,
     timeScale: 1,
