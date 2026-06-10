@@ -1,0 +1,99 @@
+# 🐺 NIKO: Guardian of Base
+
+**Defend the Chain. Protect the Pack.**
+
+A browser tower defense game for the NIKO meme coin brand. NIKO — the black
+and blue wolf guardian — defends the **Base Vault** against 25 waves of Jeets,
+Ruggers, Bot Swarms, Snipers and the dreaded **FUD Beast**.
+
+Built with **React + Vite + TypeScript**, an **HTML5 Canvas** game engine and
+**Tailwind CSS** UI. Fully playable on desktop and mobile (tap-to-place
+controls). No backend required — high scores persist in local storage.
+
+## Running locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open the printed URL (default `http://localhost:5173`).
+
+Production build:
+
+```bash
+npm run build    # type-checks and outputs to dist/
+npm run preview  # serve the production build locally
+```
+
+## How to play
+
+1. Pick a difficulty (Pup / Guardian / Alpha Wolf) and press **Defend the Chain**.
+2. Press **Start Wave** to send in the next wave (Enter also works).
+3. Tap a tower card in the build bar, then tap any open tile to place it.
+4. Towers fire automatically; kills earn **Paws 🐾**.
+5. Tap a placed tower to **upgrade** (2 upgrade tiers) or **sell** (70% refund).
+6. Every 5th wave a **FUD Beast** boss enters the trenches.
+7. Survive all **25 waves** to win. If the Vault's health hits zero, game over.
+
+Desktop niceties: hover previews tower range before placing, **Space** pauses,
+**Enter** starts the next wave. The **2x** button fast-forwards.
+
+## Towers
+
+| Tower           | Role                          | Cost |
+| --------------- | ----------------------------- | ---- |
+| Diamond Paw     | Balanced single-target DPS    | 50   |
+| Pack Scout      | Slows enemies                 | 60   |
+| Blue Flame      | Damage over time (burn)       | 80   |
+| Howl Cannon     | Splash damage                 | 90   |
+| Guardian NIKO   | Hero tower, massive damage    | 250  |
+
+## Enemies
+
+| Enemy     | Behavior                                  |
+| --------- | ----------------------------------------- |
+| Jeet      | Fast, low HP                              |
+| Rugger    | Slow, high HP, costs 2 lives if it leaks  |
+| Bot Swarm | Many weak units in rapid succession       |
+| Sniper    | Fast; 30% chance to dodge direct hits     |
+| FUD Beast | Boss every 5th wave; costs 10 lives       |
+
+## Project structure
+
+```
+src/
+  components/   React UI (start screen, HUD, build bar, overlays)
+  game/         Canvas engine: Engine, Enemy, Tower, Projectile,
+                renderer (placeholder vector art), sprites registry, sound stub
+  assets/       Art drop-zone + sprite key documentation
+  data/         Balance tables: towers, enemies, waves, map, difficulty, copy
+  hooks/        React <-> engine bridge, high scores
+  utils/        math, localStorage, future integration stubs
+  types/        Shared TypeScript types
+```
+
+Design notes:
+
+- **Engine vs React:** the simulation runs in `src/game/Engine.ts` on
+  `requestAnimationFrame` and renders straight to canvas; React only receives
+  throttled UI snapshots (~8/s), so the DOM never re-renders per frame.
+- **Art is swappable:** every drawable looks up the sprite registry first and
+  falls back to placeholder vector shapes — see `src/assets/README.md`.
+- **Balance lives in data:** all tower/enemy/wave numbers are plain tables in
+  `src/data/`, so tuning needs no engine changes.
+
+## Future-ready seams (`src/utils/integrations.ts`)
+
+- **Wallet connect** — `WalletProvider` stub, ready for wagmi/viem on Base.
+- **Leaderboard** — `LeaderboardProvider` interface with a local-storage
+  implementation; swap in an API client later.
+- **NFT skin unlocks** — `SkinProvider` feeds key→URL overrides into the
+  sprite registry.
+- **Weekly tournament** — `TournamentProvider` supplies a shared weekly seed
+  for identical wave schedules.
+- **Telegram sharing** — already live on the end screen via `t.me/share`.
+
+---
+
+*The Pack Holds.* 🐾
