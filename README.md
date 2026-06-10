@@ -10,6 +10,15 @@ Built with **React + Vite + TypeScript**, an **HTML5 Canvas** game engine and
 **Tailwind CSS** UI. Fully playable on desktop and mobile (tap-to-place
 controls). No backend required — high scores persist in local storage.
 
+## Play online
+
+Every merge to `main` auto-deploys to GitHub Pages via
+`.github/workflows/deploy.yml` (the same workflow type-checks and builds every
+pull request). Once the repository is public and the first deploy has run, the
+game is live at:
+
+> https://cryptosuess.github.io/AlphaDefense/
+
 ## Running locally
 
 ```bash
