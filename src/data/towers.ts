@@ -17,6 +17,20 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
       { damage: 27, range: 142, fireRate: 1.9, projectileSpeed: 480, cost: 45 },
       { damage: 44, range: 158, fireRate: 2.3, projectileSpeed: 500, cost: 80 },
     ],
+    branches: [
+      {
+        id: 'fangs',
+        name: 'Diamond Fangs',
+        tagline: 'A blur of bites. Massive attack speed.',
+        stats: { damage: 50, range: 158, fireRate: 3.6, projectileSpeed: 540, cost: 140 },
+      },
+      {
+        id: 'edge',
+        name: 'Diamond Edge',
+        tagline: 'One precise strike. Huge damage and range.',
+        stats: { damage: 115, range: 195, fireRate: 1.3, projectileSpeed: 560, cost: 140 },
+      },
+    ],
   },
   howlCannon: {
     id: 'howlCannon',
@@ -28,6 +42,27 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
       { damage: 26, range: 120, fireRate: 0.7, projectileSpeed: 320, splashRadius: 55, cost: 90 },
       { damage: 42, range: 130, fireRate: 0.8, projectileSpeed: 330, splashRadius: 66, cost: 75 },
       { damage: 66, range: 142, fireRate: 0.95, projectileSpeed: 340, splashRadius: 80, cost: 130 },
+    ],
+    branches: [
+      {
+        id: 'alpha',
+        name: 'Alpha Howl',
+        tagline: 'The howl that freezes the herd. Splash briefly stops enemies.',
+        // "Stun" is a near-total slow, so it reuses the slow pipeline/visuals.
+        stats: {
+          damage: 70, range: 142, fireRate: 0.95, projectileSpeed: 340,
+          splashRadius: 80, slowFactor: 0.05, slowDuration: 0.45, cost: 180,
+        },
+      },
+      {
+        id: 'seismic',
+        name: 'Seismic Howl',
+        tagline: 'Shakes the whole trench. Bigger booms, bigger blast.',
+        stats: {
+          damage: 108, range: 148, fireRate: 0.9, projectileSpeed: 340,
+          splashRadius: 102, cost: 180,
+        },
+      },
     ],
   },
   blueFlame: {
@@ -80,9 +115,14 @@ export const TOWER_ORDER: TowerTypeId[] = [
 /** Fraction of total invested Paws refunded when a tower is sold. */
 export const SELL_REFUND = 0.7;
 
-/** Total paws invested into a tower at a given level (build + upgrades). */
-export function investedCost(type: TowerTypeId, level: number): number {
-  return TOWERS[type].levels
-    .slice(0, level + 1)
-    .reduce((sum, l) => sum + l.cost, 0);
+/** Total paws invested into a tower (build + upgrades + chosen branch). */
+export function investedCost(
+  type: TowerTypeId,
+  level: number,
+  branch: 0 | 1 | null = null,
+): number {
+  const def = TOWERS[type];
+  const levels = def.levels.slice(0, level + 1).reduce((sum, l) => sum + l.cost, 0);
+  const branchCost = branch !== null && def.branches ? def.branches[branch].stats.cost : 0;
+  return levels + branchCost;
 }

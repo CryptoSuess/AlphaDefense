@@ -62,15 +62,21 @@ Desktop niceties: hover previews tower range before placing, **Space** pauses,
 | Howl Cannon     | Splash damage                 | 90   |
 | Guardian NIKO   | Hero tower, massive damage    | 250  |
 
+Towers have a player-cyclable **targeting mode** (First / Strong / Close), and
+Diamond Paw and Howl Cannon can **specialize** at max level into one of two
+final-tier branches (e.g. Alpha Howl's stunning splash vs. Seismic Howl's
+massive blast radius).
+
 ## Enemies
 
-| Enemy     | Behavior                                  |
-| --------- | ----------------------------------------- |
-| Jeet      | Fast, low HP                              |
-| Rugger    | Slow, high HP, costs 2 lives if it leaks  |
-| Bot Swarm | Many weak units in rapid succession       |
-| Sniper    | Fast; 30% chance to dodge direct hits     |
-| FUD Beast | Boss every 5th wave; costs 10 lives       |
+| Enemy     | Behavior                                          |
+| --------- | ------------------------------------------------- |
+| Jeet      | Fast, low HP                                      |
+| Rugger    | Slow, high HP, costs 2 lives if it leaks          |
+| Bot Swarm | Many weak units in rapid succession               |
+| Sniper    | Fast; 30% chance to dodge direct hits             |
+| Shiller   | Heals nearby enemies (aura) — focus it down first |
+| FUD Beast | Boss every 5th wave; splits into a bot swarm on death; costs 10 lives |
 
 ## Sound
 
@@ -80,6 +86,15 @@ growl, fanfares) is built from enveloped oscillators and noise bursts in
 `src/game/sound.ts`, plus a quiet ambient bass loop under the action. The HUD
 speaker button toggles everything (persisted). To use recorded SFX later,
 replace the matching case in `synthesize()` — engine call sites don't change.
+
+## PWA & sharing
+
+The game is an installable **PWA**: `public/manifest.webmanifest` + a small
+service worker (`public/sw.js`, network-first app shell, cache-first hashed
+assets) make it work offline and installable to phone home screens. Social
+links unfurl with Open Graph / Twitter cards; the icons and the OG card are
+generated placeholders — regenerate with `node scripts/generate-images.mjs`
+or drop real brand art into `public/`.
 
 ## Web3 (groundwork)
 

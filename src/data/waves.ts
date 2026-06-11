@@ -65,6 +65,12 @@ export function buildWave(wave: number): SpawnEntry[] {
     groups.push({ type: 'sniper', count: 2 + Math.floor(wave / 2), interval: 0.9 });
   }
 
+  // Shillers: pump the bags of nearby enemies (heal aura) from wave 8.
+  // Spaced out so they escort different parts of the push.
+  if (wave >= 8) {
+    groups.push({ type: 'shiller', count: 1 + Math.floor(wave / 7), interval: 4 });
+  }
+
   // Boss waves: FUD Beast(s) arrive after the regular push.
   if (boss) {
     groups.push({ type: 'fudBeast', count: Math.floor(wave / BOSS_EVERY), interval: 6 });

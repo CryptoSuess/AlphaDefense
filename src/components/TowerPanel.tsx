@@ -1,28 +1,52 @@
 import { TOWERS } from '../data/towers';
-import type { TowerSnapshot } from '../types';
+import type { TargetingMode, TowerSnapshot } from '../types';
 
 interface Props {
   tower: TowerSnapshot;
   paws: number;
   onUpgrade: (id: number) => void;
+  onBranch: (id: number, index: 0 | 1) => void;
+  onCycleTargeting: (id: number) => void;
   onSell: (id: number) => void;
   onClose: () => void;
 }
 
-/** Floating panel for a selected tower: stats, upgrade and sell actions. */
-export function TowerPanel({ tower, paws, onUpgrade, onSell, onClose }: Props) {
+const TARGETING_LABEL: Record<TargetingMode, string> = {
+  first: '🎯 First',
+  strong: '💪 Strong',
+  close: '📍 Close',
+};
+
+/**
+ * Floating panel for a selected tower: stats, targeting mode, upgrade
+ * (including the final-tier branch choice) and sell actions.
+ */
+export function TowerPanel({
+  tower,
+  paws,
+  onUpgrade,
+  onBranch,
+  onCycleTargeting,
+  onSell,
+  onClose,
+}: Props) {
   const def = TOWERS[tower.type];
-  const stats = def.levels[tower.level];
-  const next = tower.level < tower.maxLevel ? def.levels[tower.level + 1] : null;
+  const stats =
+    tower.branchName !== null && def.branches
+      ? def.branches.find((b) => b.name === tower.branchName)!.stats
+      : def.levels[tower.level];
+  const next = tower.upgradeCost !== null ? def.levels[tower.level + 1] : null;
   const canAfford = tower.upgradeCost !== null && paws >= tower.upgradeCost;
 
   return (
     <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-niko-line bg-niko-panel/95 px-3 py-2 text-sm">
       <div>
         <div className="font-bold" style={{ color: def.color }}>
-          {def.name}{' '}
+          {tower.branchName ?? def.name}{' '}
           <span className="text-xs text-slate-400">
-            Lv {tower.level + 1}/{tower.maxLevel + 1}
+            {tower.branchName
+              ? 'MAX'
+              : `Lv ${tower.level + 1}/${tower.maxLevel + 1}`}
           </span>
         </div>
         <div className="text-xs text-slate-400">{def.tagline}</div>
@@ -34,7 +58,15 @@ export function TowerPanel({ tower, paws, onUpgrade, onSell, onClose }: Props) {
         <StatDelta label="RATE" cur={stats.fireRate} next={next?.fireRate} />
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <button
+        onClick={() => onCycleTargeting(tower.id)}
+        title="Cycle targeting: First (closest to vault) → Strong (most HP) → Close (nearest)"
+        className="rounded-lg border border-niko-line bg-niko-navy px-3 py-1.5 text-xs font-bold hover:border-niko-electric"
+      >
+        {TARGETING_LABEL[tower.targeting]}
+      </button>
+
+      <div className="ml-auto flex flex-wrap items-center gap-2">
         {tower.upgradeCost !== null ? (
           <button
             onClick={() => onUpgrade(tower.id)}
@@ -47,6 +79,25 @@ export function TowerPanel({ tower, paws, onUpgrade, onSell, onClose }: Props) {
           >
             Upgrade ({tower.upgradeCost} 🐾)
           </button>
+        ) : tower.branchOptions ? (
+          tower.branchOptions.map((b) => {
+            const affordable = paws >= b.cost;
+            return (
+              <button
+                key={b.index}
+                onClick={() => onBranch(tower.id, b.index)}
+                disabled={!affordable}
+                title={b.tagline}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
+                  affordable
+                    ? 'bg-gradient-to-r from-niko-blue to-niko-flame hover:brightness-110'
+                    : 'cursor-not-allowed bg-niko-navy text-slate-500'
+                }`}
+              >
+                ⭐ {b.name} ({b.cost} 🐾)
+              </button>
+            );
+          })
         ) : (
           <span className="rounded-lg bg-niko-navy px-3 py-1.5 text-xs font-bold text-yellow-300">
             MAX LEVEL

@@ -60,6 +60,22 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     color: '#a855f7',
     spriteKey: 'enemy.sniper',
   },
+  shiller: {
+    id: 'shiller',
+    name: 'Shiller',
+    hp: 85,
+    speed: 65,
+    reward: 18,
+    score: 30,
+    livesCost: 1,
+    radius: 13,
+    evasion: 0,
+    boss: false,
+    healDps: 16, // scales with the same wave/difficulty multiplier as HP
+    healRadius: 95,
+    color: '#2dd4bf',
+    spriteKey: 'enemy.shiller',
+  },
   fudBeast: {
     id: 'fudBeast',
     name: 'FUD Beast',
@@ -71,6 +87,7 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     radius: 24,
     evasion: 0,
     boss: true,
+    deathSpawn: { type: 'bot', count: 8 }, // splits into a bot swarm when slain
     color: '#22c55e',
     spriteKey: 'enemy.fudBeast',
   },
