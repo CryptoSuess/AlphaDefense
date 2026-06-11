@@ -132,6 +132,8 @@ export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: 
             tower={ui.selectedTower}
             paws={ui.paws}
             onUpgrade={(id) => engine.upgradeTower(id)}
+            onBranch={(id, index) => engine.chooseBranch(id, index)}
+            onCycleTargeting={(id) => engine.cycleTargeting(id)}
             onSell={(id) => engine.sellTower(id)}
             onClose={() => engine.clearSelection()}
           />

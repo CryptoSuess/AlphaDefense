@@ -31,6 +31,8 @@ export class Enemy {
   /** Burn effect: takes `burnDps` damage/s until `burnUntil`. */
   burnDps = 0;
   burnUntil = 0;
+  /** HP/s this unit heals nearby allies for (0 for non-healers). */
+  readonly healDps: number;
 
   private readonly waypoints: Array<[number, number]>;
 
@@ -38,8 +40,18 @@ export class Enemy {
     this.def = ENEMIES[type];
     this.maxHp = Math.round(this.def.hp * hpMult);
     this.hp = this.maxHp;
+    // Heals scale with the same multiplier as HP so healers stay relevant.
+    this.healDps = (this.def.healDps ?? 0) * hpMult;
     this.waypoints = map.waypointsPx;
     [this.x, this.y] = this.waypoints[0];
+  }
+
+  /** Drops this enemy at another enemy's position on the path (death-splits). */
+  placeAt(other: Enemy, jitter = 0): void {
+    this.x = other.x + (Math.random() - 0.5) * jitter;
+    this.y = other.y + (Math.random() - 0.5) * jitter;
+    this.seg = other.seg;
+    this.progress = other.progress;
   }
 
   /** Advances along the path. Returns true if the enemy leaked this frame. */

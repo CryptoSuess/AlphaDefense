@@ -172,6 +172,19 @@ export class GameEngine {
     }
     this.enemies = this.enemies.filter((e) => !e.dead);
 
+    // Shiller heal auras: healers pump nearby allies back up (not themselves,
+    // so focus-firing the healer always works).
+    for (const healer of this.enemies) {
+      if (healer.healDps <= 0 || healer.dead) continue;
+      const radius = healer.def.healRadius ?? 0;
+      for (const e of this.enemies) {
+        if (e === healer || e.dead || e.hp >= e.maxHp) continue;
+        if (dist(healer.x, healer.y, e.x, e.y) <= radius) {
+          e.hp = Math.min(e.maxHp, e.hp + healer.healDps * dt);
+        }
+      }
+    }
+
     // Towers acquire targets and fire.
     for (const t of this.towers) {
       t.cooldown -= dt;
@@ -269,6 +282,16 @@ export class GameEngine {
     if (e.def.boss) {
       this.shake = Math.min(this.shake + 10, 18);
       this.emit({ kind: 'toast', text: COPY.bossDown, tone: 'success' });
+    }
+    // Death-split: the FUD Beast bursts into a bot swarm where it fell.
+    const spawn = e.def.deathSpawn;
+    if (spawn) {
+      const hpMult = this.hpMultBase * waveHpMult(this.wave);
+      for (let i = 0; i < spawn.count; i++) {
+        const child = new Enemy(spawn.type, hpMult, this.map);
+        child.placeAt(e, e.def.radius * 1.5);
+        this.enemies.push(child);
+      }
     }
     if (this.selectedTowerId === null) this.uiTimer = 1; // refresh paws promptly
   }
@@ -387,6 +410,34 @@ export class GameEngine {
     this.paws -= cost;
     t.level += 1;
     this.sound.play('upgrade');
+    this.publishUi();
+  }
+
+  /** Buys a final-tier specialization for a tower at its branch point. */
+  chooseBranch(id: number, index: 0 | 1): void {
+    const t = this.towers.find((tw) => tw.id === id);
+    if (!t || this.status !== 'playing' || !t.atBranchPoint) return;
+    const cost = t.def.branches?.[index].stats.cost ?? 0;
+    if (this.paws < cost) {
+      this.emit({ kind: 'toast', text: COPY.notEnoughPaws, tone: 'danger' });
+      return;
+    }
+    this.paws -= cost;
+    t.chooseBranch(index);
+    this.sound.play('upgrade');
+    this.emit({
+      kind: 'toast',
+      text: `${t.def.branches![index].name} unlocked — Diamond Paws Activated`,
+      tone: 'success',
+    });
+    this.publishUi();
+  }
+
+  /** Cycles a tower's targeting mode (first → strong → close). */
+  cycleTargeting(id: number): void {
+    const t = this.towers.find((tw) => tw.id === id);
+    if (!t) return;
+    t.cycleTargeting();
     this.publishUi();
   }
 

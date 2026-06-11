@@ -511,6 +511,30 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, now: number): void {
         ctx.fill();
         break;
       }
+      case 'shiller': { // healer: rounded body with a pulsing megaphone cross
+        // Heal aura, pulsing outward.
+        const auraR = (e.def.healRadius ?? 0) * (0.55 + 0.1 * Math.sin(now * 3 + e.id));
+        ctx.strokeStyle = 'rgba(45, 212, 191, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(e.x, ey, auraR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Body.
+        ctx.fillStyle = e.def.color;
+        ctx.beginPath();
+        ctx.arc(e.x, ey, r, 0, Math.PI * 2);
+        ctx.fill();
+        // "+" pump symbol.
+        ctx.strokeStyle = '#042f2e';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(e.x - r * 0.5, ey);
+        ctx.lineTo(e.x + r * 0.5, ey);
+        ctx.moveTo(e.x, ey - r * 0.5);
+        ctx.lineTo(e.x, ey + r * 0.5);
+        ctx.stroke();
+        break;
+      }
       case 'fudBeast': { // boss: pulsing spiky blob with glaring eyes
         const pulse = 1 + 0.07 * Math.sin(now * 3 + e.id);
         ctx.translate(e.x, ey);

@@ -12,7 +12,7 @@ export type TowerTypeId =
   | 'guardianNiko';
 
 /** Identifier for each enemy type. */
-export type EnemyTypeId = 'jeet' | 'rugger' | 'bot' | 'sniper' | 'fudBeast';
+export type EnemyTypeId = 'jeet' | 'rugger' | 'bot' | 'sniper' | 'shiller' | 'fudBeast';
 
 /** Difficulty presets selectable on the start screen. */
 export type DifficultyId = 'pup' | 'guardian' | 'alpha';
@@ -22,6 +22,9 @@ export type MapId = 'vaultRun' | 'gauntlet' | 'fudSpiral';
 
 /** High level game status driven by the engine. */
 export type GameStatus = 'playing' | 'paused' | 'gameover' | 'victory';
+
+/** How a tower picks its target among enemies in range. */
+export type TargetingMode = 'first' | 'strong' | 'close';
 
 /** Stats for a single tower level. Optional fields only apply to some towers. */
 export interface TowerLevelStats {
@@ -47,6 +50,15 @@ export interface TowerLevelStats {
   cost: number;
 }
 
+/** A final-tier specialization a tower can upgrade into (pick one of two). */
+export interface TowerBranch {
+  id: string;
+  name: string;
+  tagline: string;
+  /** Stats while specialized; `cost` is the price of choosing this branch. */
+  stats: TowerLevelStats;
+}
+
 /** Static definition of a tower type. */
 export interface TowerDef {
   id: TowerTypeId;
@@ -56,6 +68,8 @@ export interface TowerDef {
   color: string;
   /** Per-level stats; index 0 is the freshly built tower. */
   levels: TowerLevelStats[];
+  /** Optional pair of mutually exclusive final upgrades after the last level. */
+  branches?: [TowerBranch, TowerBranch];
   /** Sprite registry key, so real art can be swapped in later. */
   spriteKey: string;
 }
@@ -80,6 +94,12 @@ export interface EnemyDef {
   evasion: number;
   /** Whether this enemy is a boss (FUD Beast). */
   boss: boolean;
+  /** Heals nearby allies for this many HP/s (Shiller). Scales with wave. */
+  healDps?: number;
+  /** Heal aura radius in px (Shiller). */
+  healRadius?: number;
+  /** Enemies spawned at this unit's position when it dies (FUD Beast). */
+  deathSpawn?: { type: EnemyTypeId; count: number };
   color: string;
   spriteKey: string;
 }
@@ -110,8 +130,13 @@ export interface TowerSnapshot {
   type: TowerTypeId;
   level: number;
   maxLevel: number;
-  /** Cost of next upgrade, or null if maxed. */
+  /** Cost of next upgrade, or null if maxed or awaiting a branch choice. */
   upgradeCost: number | null;
+  /** Final-tier branch options, present once the last level is reached. */
+  branchOptions: Array<{ index: 0 | 1; name: string; tagline: string; cost: number }> | null;
+  /** Name of the chosen branch, if specialized. */
+  branchName: string | null;
+  targeting: TargetingMode;
   /** Paws refunded when sold. */
   sellValue: number;
   col: number;
