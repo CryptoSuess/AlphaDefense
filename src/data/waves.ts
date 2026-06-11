@@ -42,33 +42,37 @@ interface Group {
  * Procedurally builds the spawn timeline for a wave.
  * Groups spawn one after another with a short gap, so waves read as
  * distinct "pushes" rather than a uniform stream.
+ *
+ * `countMult` scales group sizes (weekly challenge modifiers); bosses are
+ * never multiplied.
  */
-export function buildWave(wave: number): SpawnEntry[] {
+export function buildWave(wave: number, countMult = 1): SpawnEntry[] {
   const groups: Group[] = [];
   const boss = isBossWave(wave);
+  const scale = (n: number) => Math.max(1, Math.round(n * countMult));
 
   // Jeets: present in every wave, growing steadily.
-  groups.push({ type: 'jeet', count: 5 + wave * 2, interval: 0.7 });
+  groups.push({ type: 'jeet', count: scale(5 + wave * 2), interval: 0.7 });
 
   // Ruggers: tanky pressure from wave 2.
   if (wave >= 2) {
-    groups.push({ type: 'rugger', count: 1 + wave, interval: 1.3 });
+    groups.push({ type: 'rugger', count: scale(1 + wave), interval: 1.3 });
   }
 
   // Bot Swarm: large packs of weak units from wave 3.
   if (wave >= 3) {
-    groups.push({ type: 'bot', count: 8 + wave * 2, interval: 0.28 });
+    groups.push({ type: 'bot', count: scale(8 + wave * 2), interval: 0.28 });
   }
 
   // Snipers: fast and evasive from wave 6.
   if (wave >= 6) {
-    groups.push({ type: 'sniper', count: 2 + Math.floor(wave / 2), interval: 0.9 });
+    groups.push({ type: 'sniper', count: scale(2 + Math.floor(wave / 2)), interval: 0.9 });
   }
 
   // Shillers: pump the bags of nearby enemies (heal aura) from wave 8.
   // Spaced out so they escort different parts of the push.
   if (wave >= 8) {
-    groups.push({ type: 'shiller', count: 1 + Math.floor(wave / 7), interval: 4 });
+    groups.push({ type: 'shiller', count: scale(1 + Math.floor(wave / 7)), interval: 4 });
   }
 
   // Boss waves: FUD Beast(s) arrive after the regular push.

@@ -35,13 +35,16 @@ export class Enemy {
   readonly healDps: number;
 
   private readonly waypoints: Array<[number, number]>;
+  /** Global speed multiplier (weekly challenge modifiers). */
+  private readonly speedMult: number;
 
-  constructor(type: EnemyTypeId, hpMult: number, map: GameMap) {
+  constructor(type: EnemyTypeId, hpMult: number, map: GameMap, speedMult = 1) {
     this.def = ENEMIES[type];
     this.maxHp = Math.round(this.def.hp * hpMult);
     this.hp = this.maxHp;
     // Heals scale with the same multiplier as HP so healers stay relevant.
     this.healDps = (this.def.healDps ?? 0) * hpMult;
+    this.speedMult = speedMult;
     this.waypoints = map.waypointsPx;
     [this.x, this.y] = this.waypoints[0];
   }
@@ -62,7 +65,7 @@ export class Enemy {
     }
     if (now >= this.slowUntil) this.slowFactor = 1;
 
-    let move = this.def.speed * this.slowFactor * dt;
+    let move = this.def.speed * this.speedMult * this.slowFactor * dt;
     while (move > 0 && this.seg < this.waypoints.length) {
       const [tx, ty] = this.waypoints[this.seg];
       const d = Math.hypot(tx - this.x, ty - this.y);

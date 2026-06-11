@@ -422,13 +422,21 @@ function drawTowerIcon(
       ctx.beginPath();
       ctx.arc(x, y + 8, 6, 0, Math.PI * 2);
       ctx.fill();
-      // Three blue forehead marks that glow brighter as NIKO fires.
-      ctx.fillStyle = recoil > 0 ? '#93c5fd' : '#3b82f6';
+      // Three blue forehead streaks that glow brighter as NIKO fires.
+      ctx.strokeStyle = recoil > 0 ? '#93c5fd' : '#0052ff';
+      ctx.lineWidth = 1.8 + recoil;
+      ctx.lineCap = 'round';
       for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
-        ctx.arc(x + i * 5, y - 4, 1.8 + recoil, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(x + i * 5, y - 9);
+        ctx.lineTo(x + i * 5, y - 3 + (i === 0 ? 2 : 0));
+        ctx.stroke();
       }
+      // Blue nose on the muzzle.
+      ctx.fillStyle = '#0052ff';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 7, 2.4, 1.6, 0, 0, Math.PI * 2);
+      ctx.fill();
       // Blue flame tail tip, flickering.
       const f = 1 + 0.15 * Math.sin(now * 8 + t.id);
       ctx.fillStyle = '#38bdf8';

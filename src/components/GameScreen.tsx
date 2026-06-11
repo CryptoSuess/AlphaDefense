@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CANVAS_H, CANVAS_W } from '../data/map';
-import type { DifficultyId, GameEvent, MapId } from '../types';
+import type { DifficultyId, GameEvent, MapId, RunStats, WeeklyChallenge } from '../types';
 import { useGameEngine } from '../hooks/useGameEngine';
 import { EndScreen } from './EndScreen';
 import { Hud } from './Hud';
@@ -11,10 +11,14 @@ import { Toasts, type ToastItem } from './Toasts';
 interface Props {
   difficulty: DifficultyId;
   mapId: MapId;
+  /** Present when playing the Weekly Trench. */
+  challenge?: WeeklyChallenge;
+  /** Storage key the final score is recorded under. */
+  scoreStorageKey: string;
   onQuit: () => void;
   onRetry: () => void;
   /** Returns true if this run set a new personal best. */
-  submitScore: (map: MapId, difficulty: DifficultyId, score: number) => boolean;
+  submitScore: (key: string, score: number) => boolean;
 }
 
 let toastId = 0;
@@ -24,7 +28,15 @@ let toastId = 0;
  * Pointer events are translated from CSS pixels to logical canvas
  * coordinates so the same code path serves mouse and touch.
  */
-export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: Props) {
+export function GameScreen({
+  difficulty,
+  mapId,
+  challenge,
+  scoreStorageKey,
+  onQuit,
+  onRetry,
+  submitScore,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [ended, setEnded] = useState<{
@@ -32,6 +44,7 @@ export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: 
     score: number;
     wave: number;
     isRecord: boolean;
+    stats: RunStats;
   } | null>(null);
 
   const handleEvent = useCallback(
@@ -41,14 +54,14 @@ export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: 
         setToasts((ts) => [...ts.slice(-2), item]);
         setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== item.id)), 2600);
       } else if (e.kind === 'ended') {
-        const isRecord = submitScore(mapId, difficulty, e.score);
-        setEnded({ status: e.status, score: e.score, wave: e.wave, isRecord });
+        const isRecord = submitScore(scoreStorageKey, e.score);
+        setEnded({ status: e.status, score: e.score, wave: e.wave, isRecord, stats: e.stats });
       }
     },
-    [difficulty, mapId, submitScore],
+    [scoreStorageKey, submitScore],
   );
 
-  const { engine, ui } = useGameEngine(difficulty, mapId, canvasRef, handleEvent);
+  const { engine, ui } = useGameEngine(difficulty, mapId, canvasRef, handleEvent, challenge);
 
   /** Converts a pointer event into logical canvas coordinates. */
   const toLogical = (ev: React.PointerEvent<HTMLCanvasElement>): [number, number] => {
@@ -86,6 +99,13 @@ export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: 
         />
       </div>
 
+      {challenge && (
+        <div className="w-full max-w-5xl rounded-lg border border-niko-blue/40 bg-niko-panel/60 px-3 py-1 text-center text-xs text-niko-ice">
+          ⚔ Weekly Trench {challenge.weekKey} —{' '}
+          {challenge.modifiers.map((m) => m.label).join(' · ')}
+        </div>
+      )}
+
       <div className="relative w-full max-w-5xl">
         <Toasts toasts={toasts} />
         <canvas
@@ -112,6 +132,8 @@ export function GameScreen({ difficulty, mapId, onQuit, onRetry, submitScore }: 
             wave={ended.wave}
             difficulty={difficulty}
             isRecord={ended.isRecord}
+            stats={ended.stats}
+            weekly={challenge?.weekKey}
             onRetry={onRetry}
             onMenu={onQuit}
             onContinueEndless={

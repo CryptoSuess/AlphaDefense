@@ -12,7 +12,7 @@
  *    so every player faces identical waves for the week.
  */
 import type { DifficultyId, MapId } from '../types';
-import { loadHighScores, submitHighScore } from './storage';
+import { loadHighScores, scoreKey, submitHighScore } from './storage';
 import { connectWallet, disconnectWallet, getAddress as getWalletAddress } from './wallet';
 
 // ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ export interface LeaderboardProvider {
 /** Local stand-in until a backend exists. */
 export const leaderboard: LeaderboardProvider = {
   async submit(entry) {
-    submitHighScore(entry.map, entry.difficulty, entry.score);
+    submitHighScore(scoreKey(entry.map, entry.difficulty), entry.score);
   },
   async top() {
     const scores = loadHighScores();

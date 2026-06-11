@@ -10,7 +10,7 @@ export default {
           deep: '#060a18',
           panel: '#101935',
           line: '#1d2b55',
-          blue: '#2563ff',
+          blue: '#0052ff',
           electric: '#3b82f6',
           glow: '#60a5fa',
           ice: '#bfdbfe',

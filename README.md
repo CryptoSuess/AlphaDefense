@@ -87,6 +87,19 @@ growl, fanfares) is built from enveloped oscillators and noise bursts in
 speaker button toggles everything (persisted). To use recorded SFX later,
 replace the matching case in `synthesize()` — engine call sites don't change.
 
+## Progression
+
+- **Achievements** — 11 unlockables ("Jeet Exterminator", "Flawless Vault",
+  "Diamond Hands"...) tracked across runs in local storage and shown on the
+  start screen. Lifetime stats (kills, bosses, victories) accumulate per
+  device and will gate NFT skin unlocks later.
+- **Run stats** — the end screen breaks down each run: kills, bosses,
+  towers/upgrades bought, Paws earned and run time.
+- **Weekly Trench** — a seeded tournament mode. The challenge (map + two
+  wave modifiers) derives from the ISO week, so every player worldwide faces
+  identical waves with no backend; weekly bests are stored per week key and
+  a future global leaderboard can rank the same keys server-side.
+
 ## PWA & sharing
 
 The game is an installable **PWA**: `public/manifest.webmanifest` + a small

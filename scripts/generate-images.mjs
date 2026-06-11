@@ -94,6 +94,14 @@ class Painter {
     this.add((x, y) => (Math.hypot(x - cx, y - cy) <= r ? 1 : 0), color, alpha);
   }
 
+  /** Annulus between r0 and r1. */
+  ring(cx, cy, r0, r1, color, alpha = 1) {
+    this.add((x, y) => {
+      const d = Math.hypot(x - cx, y - cy);
+      return d >= r0 && d <= r1 ? 1 : 0;
+    }, color, alpha);
+  }
+
   /** Soft radial glow from r0 (full alpha) fading to r1 (zero). */
   glow(cx, cy, r0, r1, color, alpha = 1) {
     this.add((x, y) => {
@@ -169,44 +177,88 @@ class Painter {
 }
 
 // ---------------------------------------------------------------------------
-// The NIKO mascot mark (mirrors src/components/NikoLogo.tsx)
+// The NIKO mascot bust, styled after the official token art: smirking black
+// wolf, blue inner ears, three blue forehead streaks, white muzzle, blue
+// nose, blue hoodie with a plain white ring emblem.
+// (Mirrors src/components/NikoLogo.tsx.)
 // ---------------------------------------------------------------------------
 
-/** Draws the wolf head centered at (cx, cy) with overall scale s (head radius). */
+/** Draws the wolf bust centered at (cx, cy) with head radius s. */
 function drawNiko(p, cx, cy, s) {
-  const BLACK = '#0b0e1a';
-  // Blue flame tail tip behind the head.
-  p.ellipse(cx + s * 1.05, cy + s * 0.25, s * 0.32, s * 0.62, '#38bdf8', 0.95);
-  p.ellipse(cx + s * 1.18, cy - s * 0.18, s * 0.18, s * 0.34, '#7dd3fc', 0.9);
-  // Ears.
+  const FUR = '#0c0e16';
+  const BLUE = '#0052ff';
+  const INNER_BLUE = '#1240c4';
+
+  // Hoodie shoulders (black outline, then fill).
+  p.ellipse(cx, cy + s * 1.5, s * 1.45, s * 0.95, FUR);
+  p.ellipse(cx, cy + s * 1.55, s * 1.32, s * 0.84, '#1452d8');
+  // Hood collar shadow under the head.
+  p.ellipse(cx, cy + s * 1.0, s * 0.85, s * 0.3, '#0d3fb0');
+  // White ring emblem on the chest.
+  p.ring(cx, cy + s * 1.55, s * 0.2, s * 0.32, '#f8fafc');
+
+  // Ears: black triangles with blue inner.
   p.triangle(
-    [cx - s * 0.75, cy - s * 0.45], [cx - s * 0.55, cy - s * 1.35], [cx - s * 0.05, cy - s * 0.7],
-    BLACK,
+    [cx - s * 1.0, cy - s * 0.45], [cx - s * 0.72, cy - s * 1.55], [cx - s * 0.1, cy - s * 0.75],
+    FUR,
   );
   p.triangle(
-    [cx + s * 0.75, cy - s * 0.45], [cx + s * 0.55, cy - s * 1.35], [cx + s * 0.05, cy - s * 0.7],
-    BLACK,
+    [cx + s * 1.0, cy - s * 0.45], [cx + s * 0.72, cy - s * 1.55], [cx + s * 0.1, cy - s * 0.75],
+    FUR,
   );
+  p.triangle(
+    [cx - s * 0.82, cy - s * 0.62], [cx - s * 0.68, cy - s * 1.25], [cx - s * 0.32, cy - s * 0.78],
+    INNER_BLUE,
+  );
+  p.triangle(
+    [cx + s * 0.82, cy - s * 0.62], [cx + s * 0.68, cy - s * 1.25], [cx + s * 0.32, cy - s * 0.78],
+    INNER_BLUE,
+  );
+
+  // Cheek fur spikes.
+  p.triangle([cx - s * 0.95, cy + s * 0.1], [cx - s * 1.3, cy + s * 0.35], [cx - s * 0.7, cy + s * 0.55], FUR);
+  p.triangle([cx + s * 0.95, cy + s * 0.1], [cx + s * 1.3, cy + s * 0.35], [cx + s * 0.7, cy + s * 0.55], FUR);
+
   // Head.
-  p.circle(cx, cy, s, BLACK);
-  // White muzzle / chest.
-  p.ellipse(cx, cy + s * 0.45, s * 0.48, s * 0.4, '#f8fafc');
-  // Eyes.
-  p.circle(cx - s * 0.34, cy - s * 0.12, s * 0.12, '#60a5fa');
-  p.circle(cx + s * 0.34, cy - s * 0.12, s * 0.12, '#60a5fa');
-  // Nose.
-  p.circle(cx, cy + s * 0.32, s * 0.1, BLACK);
-  // Three blue forehead marks.
-  p.circle(cx - s * 0.27, cy - s * 0.58, s * 0.085, '#2563ff');
-  p.circle(cx, cy - s * 0.68, s * 0.085, '#2563ff');
-  p.circle(cx + s * 0.27, cy - s * 0.58, s * 0.085, '#2563ff');
+  p.circle(cx, cy, s, FUR);
+
+  // White muzzle (lower face).
+  p.ellipse(cx, cy + s * 0.45, s * 0.66, s * 0.46, '#f8fafc');
+  // Smirk: thin mouth line, slightly off-center for the smug look.
+  p.ellipse(cx + s * 0.08, cy + s * 0.62, s * 0.34, s * 0.035, FUR);
+  p.triangle(
+    [cx + s * 0.4, cy + s * 0.64],
+    [cx + s * 0.48, cy + s * 0.52],
+    [cx + s * 0.34, cy + s * 0.58],
+    FUR,
+  );
+
+  // Smug eyes: white almonds, heavy upper lids, low pupils.
+  p.ellipse(cx - s * 0.38, cy - s * 0.1, s * 0.2, s * 0.14, '#f8fafc');
+  p.ellipse(cx + s * 0.38, cy - s * 0.1, s * 0.2, s * 0.14, '#f8fafc');
+  p.ellipse(cx - s * 0.38, cy - s * 0.2, s * 0.22, s * 0.12, FUR);
+  p.ellipse(cx + s * 0.38, cy - s * 0.2, s * 0.22, s * 0.12, FUR);
+  p.circle(cx - s * 0.34, cy - s * 0.06, s * 0.065, FUR);
+  p.circle(cx + s * 0.34, cy - s * 0.06, s * 0.065, FUR);
+
+  // Blue nose.
+  p.ellipse(cx, cy + s * 0.28, s * 0.17, s * 0.11, '#1f6bff');
+
+  // Three blue forehead streaks (thin triangles pointing down).
+  for (const [dx, len] of [[-0.22, 0.24], [0, 0.32], [0.22, 0.24]]) {
+    p.triangle(
+      [cx + s * (dx - 0.035), cy - s * 0.72],
+      [cx + s * (dx + 0.035), cy - s * 0.72],
+      [cx + s * dx, cy - s * (0.72 - len)],
+      BLUE,
+    );
+  }
 }
 
 function icon(size) {
   const p = new Painter(size, size);
-  p.gradient('#0a0f24', '#0d1430');
-  p.glow(size / 2, size / 2, size * 0.1, size * 0.52, '#2563ff', 0.35);
-  drawNiko(p, size / 2, size * 0.55, size * 0.3);
+  p.gradient('#0052ff', '#0046df');
+  drawNiko(p, size / 2, size * 0.42, size * 0.27);
   return p.render();
 }
 
@@ -214,18 +266,17 @@ function ogImage() {
   const W = 1200;
   const H = 630;
   const p = new Painter(W, H);
-  p.gradient('#0a0f24', '#0d1430');
-  // Glows + decorative paw-pad dots on the flanks.
-  p.glow(W / 2, H * 0.52, 60, 330, '#2563ff', 0.4);
+  p.gradient('#0052ff', '#0043d6');
+  // Decorative paw pads on the flanks.
   for (const [dx, side] of [[-1, 0], [1, 1]]) {
-    const bx = W / 2 + dx * 430;
-    const by = H * (0.3 + side * 0.35);
-    p.circle(bx, by, 26, '#1d2b55');
-    p.circle(bx - 30, by - 32, 11, '#1d2b55');
-    p.circle(bx, by - 42, 11, '#1d2b55');
-    p.circle(bx + 30, by - 32, 11, '#1d2b55');
+    const bx = W / 2 + dx * 440;
+    const by = H * (0.32 + side * 0.34);
+    p.circle(bx, by, 26, '#0a3bc4');
+    p.circle(bx - 30, by - 32, 11, '#0a3bc4');
+    p.circle(bx, by - 42, 11, '#0a3bc4');
+    p.circle(bx + 30, by - 32, 11, '#0a3bc4');
   }
-  drawNiko(p, W / 2, H * 0.55, 150);
+  drawNiko(p, W / 2, H * 0.4, 130);
   // Title bar placeholder: the page's og:title carries the text.
   return p.render();
 }

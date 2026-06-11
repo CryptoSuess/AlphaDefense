@@ -1,4 +1,4 @@
-import type { TowerLevelStats } from '../types';
+import type { TowerLevelStats, TowerTypeId } from '../types';
 import type { Enemy } from './Enemy';
 import type { Tower } from './Tower';
 
@@ -18,6 +18,8 @@ export class Projectile {
   done = false;
   readonly stats: TowerLevelStats;
   readonly color: string;
+  /** Firing tower's type, for damage attribution in run stats. */
+  readonly towerType: TowerTypeId;
 
   constructor(
     tower: Tower,
@@ -29,6 +31,7 @@ export class Projectile {
     this.prevY = tower.y;
     this.stats = tower.stats;
     this.color = tower.def.color;
+    this.towerType = tower.type;
     this.targetX = target?.x ?? tower.x;
     this.targetY = target?.y ?? tower.y;
   }

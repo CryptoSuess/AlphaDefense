@@ -15,11 +15,14 @@ import type {
   GameEvent,
   GameStatus,
   MapId,
+  RunStats,
   SpawnEntry,
   TowerTypeId,
   UiState,
+  WeeklyChallenge,
 } from '../types';
 import { dist } from '../utils/math';
+import { AchievementTracker } from './achievements';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
 import { Tower } from './Tower';
@@ -61,11 +64,30 @@ export class GameEngine {
   hoverCell: [number, number] | null = null;
 
   readonly sound = new SoundManager();
+  /** Per-run counters for the end screen. */
+  readonly stats: RunStats = {
+    kills: {},
+    totalKills: 0,
+    bossesSlain: 0,
+    damageByTower: {},
+    towersBuilt: 0,
+    upgradesBought: 0,
+    branchesBought: 0,
+    pawsEarned: 0,
+    leaks: 0,
+    duration: 0,
+  };
+
+  private readonly tracker = new AchievementTracker((name, icon) => {
+    this.emit({ kind: 'toast', text: `${icon} Achievement unlocked: ${name}`, tone: 'success' });
+  });
 
   private spawnQueue: SpawnEntry[] = [];
   private waveClock = 0;
   private readonly hpMultBase: number;
   private readonly rewardMult: number;
+  private readonly speedMult: number;
+  private readonly countMult: number;
 
   private ctx: CanvasRenderingContext2D | null = null;
   private rafId = 0;
@@ -77,14 +99,28 @@ export class GameEngine {
   constructor(
     readonly difficulty: DifficultyId,
     mapId: MapId = 'vaultRun',
+    challenge?: WeeklyChallenge,
   ) {
     this.map = MAPS[mapId];
     const diff = DIFFICULTIES[difficulty];
     this.paws = diff.startingPaws;
     this.lives = diff.startingLives;
     this.maxLives = diff.startingLives;
-    this.hpMultBase = diff.hpMult;
-    this.rewardMult = diff.rewardMult;
+    // Weekly challenge modifiers stack multiplicatively on the difficulty.
+    let hp = 1;
+    let reward = 1;
+    let speed = 1;
+    let count = 1;
+    for (const m of challenge?.modifiers ?? []) {
+      hp *= m.hpMult ?? 1;
+      reward *= m.rewardMult ?? 1;
+      speed *= m.speedMult ?? 1;
+      count *= m.countMult ?? 1;
+    }
+    this.hpMultBase = diff.hpMult * hp;
+    this.rewardMult = diff.rewardMult * reward;
+    this.speedMult = speed;
+    this.countMult = count;
   }
 
   // ---------------------------------------------------------------------------
@@ -143,7 +179,7 @@ export class GameEngine {
       while (this.spawnQueue.length > 0 && this.spawnQueue[0].time <= this.waveClock) {
         const entry = this.spawnQueue.shift()!;
         this.enemies.push(
-          new Enemy(entry.type, this.hpMultBase * waveHpMult(this.wave), this.map),
+          new Enemy(entry.type, this.hpMultBase * waveHpMult(this.wave), this.map, this.speedMult),
         );
       }
     }
@@ -157,6 +193,7 @@ export class GameEngine {
       const leaked = e.update(dt, this.now);
       if (leaked) {
         this.lives -= e.def.livesCost;
+        this.stats.leaks += 1;
         this.lastVaultHit = this.now;
         this.shake = Math.min(this.shake + (e.def.boss ? 14 : 6), 18);
         this.sound.play('leak');
@@ -217,7 +254,10 @@ export class GameEngine {
       this.waveInProgress = false;
       const bonus = Math.round(waveClearBonus(this.wave) * this.rewardMult);
       this.paws += bonus;
+      this.stats.pawsEarned += bonus;
       this.score += waveClearScore(this.wave);
+      this.tracker.onPawsChanged(this.paws);
+      this.tracker.onWaveCleared(this.wave);
       // Victory fires once, at the end of the campaign; in endless mode the
       // run only ends when the Vault falls.
       if (this.wave >= TOTAL_WAVES && !this.endless) {
@@ -258,6 +298,11 @@ export class GameEngine {
 
   /** Applies damage and on-hit effects (burn/slow) to an enemy. */
   private damage(e: Enemy, amount: number, p: Projectile): void {
+    // Attribute the damage actually applied (no overkill); burn ticks are
+    // not attributed since they happen inside Enemy.update.
+    const applied = Math.min(amount, Math.max(0, e.hp));
+    this.stats.damageByTower[p.towerType] =
+      (this.stats.damageByTower[p.towerType] ?? 0) + applied;
     e.hp -= amount;
     const s = p.stats;
     if (s.burnDps && s.burnDuration) e.applyBurn(s.burnDps, s.burnDuration, this.now);
@@ -273,6 +318,12 @@ export class GameEngine {
     const reward = Math.round(e.def.reward * this.rewardMult);
     this.paws += reward;
     this.score += e.def.score;
+    this.stats.kills[e.def.id] = (this.stats.kills[e.def.id] ?? 0) + 1;
+    this.stats.totalKills += 1;
+    if (e.def.boss) this.stats.bossesSlain += 1;
+    this.stats.pawsEarned += reward;
+    this.tracker.onKill(e.def.id, e.def.boss);
+    this.tracker.onPawsChanged(this.paws);
     this.particles.push(text(e.x, e.y, `+${reward}🐾`, '#facc15'));
     // Death burst: a ring plus sparks in the enemy's color.
     this.particles.push(ring(e.x, e.y, e.def.radius + 10, e.def.color));
@@ -288,7 +339,7 @@ export class GameEngine {
     if (spawn) {
       const hpMult = this.hpMultBase * waveHpMult(this.wave);
       for (let i = 0; i < spawn.count; i++) {
-        const child = new Enemy(spawn.type, hpMult, this.map);
+        const child = new Enemy(spawn.type, hpMult, this.map, this.speedMult);
         child.placeAt(e, e.def.radius * 1.5);
         this.enemies.push(child);
       }
@@ -299,8 +350,13 @@ export class GameEngine {
   private endGame(status: 'gameover' | 'victory'): void {
     this.status = status;
     this.waveInProgress = false;
+    this.stats.duration = this.now;
+    if (status === 'victory') {
+      this.tracker.onVictory(this.difficulty, this.lives, this.maxLives);
+    }
+    this.tracker.onRunEnd();
     this.sound.play(status === 'victory' ? 'victory' : 'gameover');
-    this.emit({ kind: 'ended', status, score: this.score, wave: this.wave });
+    this.emit({ kind: 'ended', status, score: this.score, wave: this.wave, stats: this.stats });
     this.publishUi();
   }
 
@@ -312,7 +368,7 @@ export class GameEngine {
     if (this.status !== 'playing' || this.waveInProgress) return;
     if (this.wave >= TOTAL_WAVES && !this.endless) return;
     this.wave += 1;
-    this.spawnQueue = buildWave(this.wave);
+    this.spawnQueue = buildWave(this.wave, this.countMult);
     this.waveClock = 0;
     this.waveInProgress = true;
     const boss = isBossWave(this.wave);
@@ -393,6 +449,8 @@ export class GameEngine {
     }
     this.paws -= cost;
     this.towers.push(new Tower(type, col, row));
+    this.stats.towersBuilt += 1;
+    this.tracker.onTowersChanged(this.towers);
     this.sound.play('place');
     this.publishUi();
     return true;
@@ -409,6 +467,7 @@ export class GameEngine {
     }
     this.paws -= cost;
     t.level += 1;
+    this.stats.upgradesBought += 1;
     this.sound.play('upgrade');
     this.publishUi();
   }
@@ -424,6 +483,8 @@ export class GameEngine {
     }
     this.paws -= cost;
     t.chooseBranch(index);
+    this.stats.branchesBought += 1;
+    this.tracker.onBranchBought();
     this.sound.play('upgrade');
     this.emit({
       kind: 'toast',

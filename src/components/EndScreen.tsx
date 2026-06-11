@@ -1,6 +1,6 @@
 import { COPY } from '../data/copy';
 import { DIFFICULTIES } from '../data/difficulty';
-import type { DifficultyId } from '../types';
+import type { DifficultyId, RunStats } from '../types';
 import { telegramShareUrl } from '../utils/integrations';
 import { NikoLogo } from './NikoLogo';
 
@@ -10,6 +10,9 @@ interface Props {
   wave: number;
   difficulty: DifficultyId;
   isRecord: boolean;
+  stats: RunStats;
+  /** Week key when this was a Weekly Trench run. */
+  weekly?: string;
   onRetry: () => void;
   onMenu: () => void;
   /** Present only on the campaign victory screen: continue into endless mode. */
@@ -23,11 +26,15 @@ export function EndScreen({
   wave,
   difficulty,
   isRecord,
+  stats,
+  weekly,
   onRetry,
   onMenu,
   onContinueEndless,
 }: Props) {
   const victory = status === 'victory';
+  const minutes = Math.floor(stats.duration / 60);
+  const seconds = Math.floor(stats.duration % 60);
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-niko-deep/90 p-4">
       <div
@@ -44,7 +51,17 @@ export function EndScreen({
         <div className="grid w-full grid-cols-3 gap-2 text-sm">
           <Cell label="Score" value={String(score)} />
           <Cell label="Wave" value={String(wave)} />
-          <Cell label="Trench" value={DIFFICULTIES[difficulty].name} />
+          <Cell label="Trench" value={weekly ? `Weekly ${weekly}` : DIFFICULTIES[difficulty].name} />
+        </div>
+
+        {/* Run stats */}
+        <div className="grid w-full grid-cols-3 gap-2 text-sm sm:grid-cols-6">
+          <Cell label="Kills" value={String(stats.totalKills)} />
+          <Cell label="Bosses" value={String(stats.bossesSlain)} />
+          <Cell label="Towers" value={String(stats.towersBuilt)} />
+          <Cell label="Upgrades" value={String(stats.upgradesBought + stats.branchesBought)} />
+          <Cell label="Paws Earned" value={String(stats.pawsEarned)} />
+          <Cell label="Time" value={`${minutes}:${String(seconds).padStart(2, '0')}`} />
         </div>
 
         {isRecord && (

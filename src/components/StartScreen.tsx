@@ -1,10 +1,17 @@
 import { useState } from 'react';
+import { ACHIEVEMENTS } from '../data/achievements';
 import { COPY } from '../data/copy';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../data/difficulty';
 import { FEATURES } from '../data/features';
 import { GRID_COLS, GRID_ROWS, MAPS, MAP_ORDER } from '../data/map';
+import { getWeeklyChallenge } from '../data/weekly';
 import type { DifficultyId, MapId } from '../types';
-import { scoreKey, type HighScores } from '../utils/storage';
+import {
+  loadUnlockedAchievements,
+  scoreKey,
+  weeklyScoreKey,
+  type HighScores,
+} from '../utils/storage';
 import { shortAddress } from '../utils/wallet';
 import { useWallet } from '../hooks/useWallet';
 import { NikoLogo } from './NikoLogo';
@@ -12,12 +19,15 @@ import { NikoLogo } from './NikoLogo';
 interface Props {
   highScores: HighScores;
   onStart: (difficulty: DifficultyId, map: MapId) => void;
+  onStartWeekly: () => void;
 }
 
-/** Title screen: logo, map + difficulty selection, how-to-play, high scores. */
-export function StartScreen({ highScores, onStart }: Props) {
+/** Title screen: logo, map + difficulty selection, weekly trench, records. */
+export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
   const [difficulty, setDifficulty] = useState<DifficultyId>('guardian');
   const [mapId, setMapId] = useState<MapId>('vaultRun');
+  const weekly = getWeeklyChallenge();
+  const weeklyBest = highScores[weeklyScoreKey(weekly.weekKey)];
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-niko-deep p-4 text-white">
@@ -105,6 +115,35 @@ export function StartScreen({ highScores, onStart }: Props) {
         {COPY.startButton}
       </button>
 
+      {/* Weekly Trench: identical seeded waves for every player this week. */}
+      <div className="w-full max-w-xl rounded-xl border border-niko-blue/50 bg-niko-panel/80 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-extrabold text-niko-glow">
+              ⚔ Weekly Trench — {weekly.weekKey}
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {MAPS[weekly.mapId].def.name} ·{' '}
+              {weekly.modifiers.map((m) => m.label).join(' · ')}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Same seeded waves for every player this week.
+              {weeklyBest !== undefined && (
+                <span className="ml-1 text-yellow-300">Your best: ★ {weeklyBest}</span>
+              )}
+            </p>
+          </div>
+          <button
+            onClick={onStartWeekly}
+            className="rounded-xl bg-gradient-to-r from-niko-blue to-niko-flame px-5 py-2.5 text-sm font-extrabold uppercase tracking-wide hover:brightness-110 active:scale-95"
+          >
+            Enter
+          </button>
+        </div>
+      </div>
+
+      <AchievementsPanel />
+
       {/* How to play */}
       <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-niko-glow">
@@ -125,6 +164,40 @@ export function StartScreen({ highScores, onStart }: Props) {
       <p className="text-center text-xs text-slate-500">
         Global leaderboards, NFT skins &amp; weekly tournaments — coming soon.
       </p>
+    </div>
+  );
+}
+
+/** Grid of all achievements; locked ones render dimmed. */
+function AchievementsPanel() {
+  const unlocked = loadUnlockedAchievements();
+  return (
+    <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-niko-glow">
+        Achievements ({unlocked.size}/{ACHIEVEMENTS.length})
+      </h2>
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+        {ACHIEVEMENTS.map((a) => {
+          const got = unlocked.has(a.id);
+          return (
+            <div
+              key={a.id}
+              title={a.description}
+              className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${
+                got ? 'bg-niko-panel text-niko-ice' : 'bg-niko-navy/60 text-slate-600'
+              }`}
+            >
+              <span className={got ? '' : 'grayscale opacity-50'} aria-hidden>
+                {a.icon}
+              </span>
+              <span className="font-bold">{a.name}</span>
+              <span className="ml-auto hidden truncate text-[10px] text-slate-500 sm:inline">
+                {a.description}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
