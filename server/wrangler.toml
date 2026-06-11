@@ -1,0 +1,13 @@
+name = "niko-leaderboard"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Create the namespace first, then paste its id here:
+#   npx wrangler kv namespace create SCORES
+[[kv_namespaces]]
+binding = "SCORES"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+# Lock CORS to the game's origin in production.
+ALLOWED_ORIGIN = "https://cryptosuess.github.io"

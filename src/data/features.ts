@@ -10,6 +10,12 @@ export const FEATURES = {
   wallet: true,
   /** Local "Pack Records" panel; swaps to a global API leaderboard later. */
   leaderboard: true,
+  /**
+   * Global leaderboard API base URL (the deployed server/ Worker, e.g.
+   * "https://niko-leaderboard.<account>.workers.dev"). Empty string = the
+   * global leaderboard is off and the game is fully local, as before.
+   */
+  leaderboardApiUrl: '',
   /** NFT skin loading via SkinProvider (no skins exist yet). */
   nftSkins: false,
   /** Weekly tournament seed (needs backend). */

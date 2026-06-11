@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CANVAS_H, CANVAS_W } from '../data/map';
 import type { DifficultyId, GameEvent, MapId, RunStats, WeeklyChallenge } from '../types';
+import { globalLeaderboardEnabled, leaderboard } from '../utils/integrations';
+import { getPlayerName } from '../utils/storage';
+import { getAddress, shortAddress } from '../utils/wallet';
 import { useGameEngine } from '../hooks/useGameEngine';
 import { EndScreen } from './EndScreen';
 import { Hud } from './Hud';
@@ -55,6 +58,17 @@ export function GameScreen({
         setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== item.id)), 2600);
       } else if (e.kind === 'ended') {
         const isRecord = submitScore(scoreStorageKey, e.score);
+        // Fire-and-forget global submission when the API is configured.
+        if (globalLeaderboardEnabled) {
+          const address = getAddress() ?? undefined;
+          void leaderboard.submit({
+            key: scoreStorageKey,
+            player: address ? shortAddress(address) : getPlayerName(),
+            score: e.score,
+            wave: e.wave,
+            address,
+          });
+        }
         setEnded({ status: e.status, score: e.score, wave: e.wave, isRecord, stats: e.stats });
       }
     },

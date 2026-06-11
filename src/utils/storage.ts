@@ -106,6 +106,24 @@ export function saveUnlockedAchievements(ids: Set<string>): void {
   }
 }
 
+/**
+ * Persistent anonymous player name for leaderboard submissions
+ * (e.g. "Wolf-4821"); a connected wallet address takes precedence.
+ */
+const PLAYER_KEY = 'niko-td:player-name';
+
+export function getPlayerName(): string {
+  try {
+    const existing = localStorage.getItem(PLAYER_KEY);
+    if (existing) return existing;
+    const name = `Wolf-${Math.floor(1000 + Math.random() * 9000)}`;
+    localStorage.setItem(PLAYER_KEY, name);
+    return name;
+  } catch {
+    return 'Wolf-0000';
+  }
+}
+
 export function loadSoundOn(): boolean {
   try {
     return localStorage.getItem(SOUND_KEY) !== 'off';

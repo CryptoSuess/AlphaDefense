@@ -152,8 +152,11 @@ Design notes:
 
 - **Wallet connect** — live (injected EIP-1193 on Base); swap
   `src/utils/wallet.ts` for wagmi/viem when richer on-chain reads are needed.
-- **Leaderboard** — `LeaderboardProvider` interface with a local-storage
-  implementation (powers the Pack Records panel); swap in an API client later.
+- **Leaderboard** — a deploy-ready global leaderboard lives in `server/`
+  (Cloudflare Worker + KV: score submission, rankings, baseline anti-cheat).
+  Deploy it per `server/README.md`, set `leaderboardApiUrl` in
+  `src/data/features.ts`, and the game switches from local-only records to
+  global boards (weekly top-10 panel + score submission) automatically.
 - **NFT skin unlocks** — `SkinProvider` feeds key→URL overrides into the
   sprite registry (flag off until skins exist).
 - **Weekly tournament** — `TournamentProvider` supplies a shared weekly seed
