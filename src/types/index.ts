@@ -167,4 +167,55 @@ export interface UiState {
 /** Events the engine pushes to the UI (toasts, sounds, end states). */
 export type GameEvent =
   | { kind: 'toast'; text: string; tone: 'info' | 'danger' | 'success' }
-  | { kind: 'ended'; status: 'gameover' | 'victory'; score: number; wave: number };
+  | {
+      kind: 'ended';
+      status: 'gameover' | 'victory';
+      score: number;
+      wave: number;
+      stats: RunStats;
+    };
+
+/** Counters accumulated over a single run, shown on the end screen. */
+export interface RunStats {
+  kills: Partial<Record<EnemyTypeId, number>>;
+  totalKills: number;
+  bossesSlain: number;
+  damageByTower: Partial<Record<TowerTypeId, number>>;
+  towersBuilt: number;
+  upgradesBought: number;
+  branchesBought: number;
+  pawsEarned: number;
+  leaks: number;
+  /** Run length in game-time seconds. */
+  duration: number;
+}
+
+/** An unlockable achievement (definitions in src/data/achievements.ts). */
+export interface AchievementDef {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+/** A wave-composition modifier applied by the weekly challenge. */
+export interface WeeklyModifier {
+  id: string;
+  label: string;
+  hpMult?: number;
+  speedMult?: number;
+  countMult?: number;
+  rewardMult?: number;
+}
+
+/**
+ * The seeded weekly tournament. Derived deterministically from the ISO week,
+ * so every player worldwide faces identical waves — no backend required.
+ */
+export interface WeeklyChallenge {
+  /** e.g. "2026-W24" */
+  weekKey: string;
+  seed: number;
+  mapId: MapId;
+  modifiers: WeeklyModifier[];
+}

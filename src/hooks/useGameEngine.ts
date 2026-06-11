@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/Engine';
-import type { DifficultyId, GameEvent, MapId, UiState } from '../types';
+import type { DifficultyId, GameEvent, MapId, UiState, WeeklyChallenge } from '../types';
 import { DIFFICULTIES } from '../data/difficulty';
 import { TOTAL_WAVES } from '../data/waves';
 
@@ -14,10 +14,11 @@ export function useGameEngine(
   mapId: MapId,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   onEvent: (e: GameEvent) => void,
+  challenge?: WeeklyChallenge,
 ) {
   const engineRef = useRef<GameEngine | null>(null);
   if (engineRef.current === null) {
-    engineRef.current = new GameEngine(difficulty, mapId);
+    engineRef.current = new GameEngine(difficulty, mapId, challenge);
   }
   const engine = engineRef.current;
 
