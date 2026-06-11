@@ -71,7 +71,7 @@ export function TowerPanel({
           <button
             onClick={() => onUpgrade(tower.id)}
             disabled={!canAfford}
-            className={`rounded-lg px-3 py-1.5 font-bold ${
+            className={`rounded-lg px-3 py-2.5 font-bold sm:py-1.5 ${
               canAfford
                 ? 'bg-niko-blue hover:bg-niko-electric'
                 : 'cursor-not-allowed bg-niko-navy text-slate-500'
@@ -105,13 +105,13 @@ export function TowerPanel({
         )}
         <button
           onClick={() => onSell(tower.id)}
-          className="rounded-lg border border-niko-line px-3 py-1.5 font-bold text-red-300 hover:border-red-400"
+          className="rounded-lg border border-niko-line px-3 py-2.5 font-bold text-red-300 hover:border-red-400 sm:py-1.5"
         >
           Sell (+{tower.sellValue} 🐾)
         </button>
         <button
           onClick={onClose}
-          className="rounded-lg border border-niko-line px-2 py-1.5 hover:border-niko-electric"
+          className="min-h-11 min-w-11 rounded-lg border border-niko-line px-2 py-1.5 hover:border-niko-electric sm:min-h-0 sm:min-w-0"
           title="Close"
         >
           ✕
