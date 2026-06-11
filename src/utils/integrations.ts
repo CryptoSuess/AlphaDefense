@@ -11,8 +11,8 @@
  *  - Weekly tournament: `TournamentProvider` supplies a seeded wave schedule
  *    so every player faces identical waves for the week.
  */
-import type { DifficultyId, MapId } from '../types';
-import { loadHighScores, scoreKey, submitHighScore } from './storage';
+import { FEATURES } from '../data/features';
+import { loadHighScores, submitHighScore } from './storage';
 import { connectWallet, disconnectWallet, getAddress as getWalletAddress } from './wallet';
 
 // ---------------------------------------------------------------------------
@@ -41,31 +41,70 @@ export const wallet: WalletProvider = {
 // ---------------------------------------------------------------------------
 // Leaderboard (future) — local-only implementation for now
 // ---------------------------------------------------------------------------
+/**
+ * Boards are addressed by storage key: "<mapId>:<difficulty>" for campaign
+ * runs and "weekly:<weekKey>" for the Weekly Trench — identical to the local
+ * high-score keys and to what the server/ Worker stores.
+ */
 export interface LeaderboardEntry {
+  key: string;
   player: string;
   score: number;
-  map: MapId;
-  difficulty: DifficultyId;
+  wave: number;
+  address?: string;
 }
 
 export interface LeaderboardProvider {
   submit(entry: LeaderboardEntry): Promise<void>;
-  top(limit: number): Promise<LeaderboardEntry[]>;
+  top(key: string, limit: number): Promise<LeaderboardEntry[]>;
 }
 
-/** Local stand-in until a backend exists. */
-export const leaderboard: LeaderboardProvider = {
+/** Local stand-in: records personal bests only. */
+const localLeaderboard: LeaderboardProvider = {
   async submit(entry) {
-    submitHighScore(scoreKey(entry.map, entry.difficulty), entry.score);
+    submitHighScore(entry.key, entry.score);
   },
-  async top() {
-    const scores = loadHighScores();
-    return Object.entries(scores).flatMap(([key, score]) => {
-      const [map, difficulty] = key.split(':') as [MapId, DifficultyId];
-      return score !== undefined ? [{ player: 'You', score, map, difficulty }] : [];
-    });
+  async top(key) {
+    const score = loadHighScores()[key];
+    return score !== undefined ? [{ key, player: 'You', score, wave: 0 }] : [];
   },
 };
+
+/** Talks to the deployed server/ Worker (see server/README.md). */
+function createRemoteLeaderboard(baseUrl: string): LeaderboardProvider {
+  return {
+    async submit(entry) {
+      try {
+        await fetch(`${baseUrl}/scores`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry),
+        });
+      } catch {
+        /* offline / API down — local records still work */
+      }
+    },
+    async top(key, limit) {
+      try {
+        const res = await fetch(
+          `${baseUrl}/scores?key=${encodeURIComponent(key)}&limit=${limit}`,
+        );
+        if (!res.ok) return [];
+        const data = (await res.json()) as { entries: Omit<LeaderboardEntry, 'key'>[] };
+        return data.entries.map((e) => ({ ...e, key }));
+      } catch {
+        return [];
+      }
+    },
+  };
+}
+
+export const leaderboard: LeaderboardProvider = FEATURES.leaderboardApiUrl
+  ? createRemoteLeaderboard(FEATURES.leaderboardApiUrl)
+  : localLeaderboard;
+
+/** True when the global (server-backed) leaderboard is configured. */
+export const globalLeaderboardEnabled = Boolean(FEATURES.leaderboardApiUrl);
 
 // ---------------------------------------------------------------------------
 // NFT skins (future)

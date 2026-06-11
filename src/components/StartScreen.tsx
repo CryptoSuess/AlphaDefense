@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { COPY } from '../data/copy';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../data/difficulty';
@@ -12,6 +12,7 @@ import {
   weeklyScoreKey,
   type HighScores,
 } from '../utils/storage';
+import { globalLeaderboardEnabled, leaderboard } from '../utils/integrations';
 import { shortAddress } from '../utils/wallet';
 import { useWallet } from '../hooks/useWallet';
 import { NikoLogo } from './NikoLogo';
@@ -142,6 +143,8 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
         </div>
       </div>
 
+      {globalLeaderboardEnabled && <GlobalTopPanel boardKey={weeklyScoreKey(weekly.weekKey)} />}
+
       <AchievementsPanel />
 
       {/* How to play */}
@@ -164,6 +167,47 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
       <p className="text-center text-xs text-slate-500">
         Global leaderboards, NFT skins &amp; weekly tournaments — coming soon.
       </p>
+    </div>
+  );
+}
+
+/** Global top-10 for a board (only rendered when the API is configured). */
+function GlobalTopPanel({ boardKey }: { boardKey: string }) {
+  const [entries, setEntries] = useState<Awaited<ReturnType<typeof leaderboard.top>> | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    leaderboard.top(boardKey, 10).then((e) => {
+      if (alive) setEntries(e);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [boardKey]);
+
+  return (
+    <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
+      <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-niko-glow">
+        🌍 Global Weekly Top 10
+      </h2>
+      {entries === null ? (
+        <p className="text-xs text-slate-500">Loading…</p>
+      ) : entries.length === 0 ? (
+        <p className="text-xs text-slate-500">No scores yet this week — be the first Wolf in.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <tbody>
+            {entries.map((e, i) => (
+              <tr key={`${e.player}-${i}`} className="border-t border-niko-line/50 first:border-t-0">
+                <td className="py-1 pr-2 text-slate-500">{i + 1}.</td>
+                <td className="py-1">{e.player}</td>
+                <td className="py-1 text-slate-400">w{e.wave}</td>
+                <td className="py-1 text-right font-bold tabular-nums text-yellow-300">{e.score}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
