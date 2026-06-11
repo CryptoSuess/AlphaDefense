@@ -6,6 +6,9 @@ html,
 body {
   background-color: #060a18;
   overscroll-behavior: none;
+  /* No gray flash on taps; keep text size stable when rotating phones. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Toast slide/fade-in */

@@ -398,6 +398,13 @@ export class GameEngine {
     this.publishUi();
   }
 
+  /** Non-toggling variant used by drag-to-place: always selects. */
+  beginPlacement(type: TowerTypeId): void {
+    this.selectedTowerType = type;
+    this.selectedTowerId = null;
+    this.publishUi();
+  }
+
   /** Handles a tap/click at logical canvas coordinates. */
   pointerDown(x: number, y: number): void {
     if (this.status !== 'playing' && this.status !== 'paused') return;

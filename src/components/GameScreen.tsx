@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CANVAS_H, CANVAS_W } from '../data/map';
-import type { DifficultyId, GameEvent, MapId, RunStats, WeeklyChallenge } from '../types';
+import { CANVAS_H, CANVAS_W, TILE } from '../data/map';
+import type { DifficultyId, GameEvent, MapId, RunStats, TowerTypeId, WeeklyChallenge } from '../types';
 import { globalLeaderboardEnabled, leaderboard } from '../utils/integrations';
 import { getPlayerName } from '../utils/storage';
 import { getAddress, shortAddress } from '../utils/wallet';
@@ -85,6 +85,60 @@ export function GameScreen({
       ((ev.clientY - rect.top) / rect.height) * CANVAS_H,
     ];
   };
+
+  /** Logical canvas coords from client coords, or null when off-canvas. */
+  const clientToLogical = useCallback((clientX: number, clientY: number): [number, number] | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      return null;
+    }
+    return [
+      ((clientX - rect.left) / rect.width) * CANVAS_W,
+      ((clientY - rect.top) / rect.height) * CANVAS_H,
+    ];
+  }, []);
+
+  /**
+   * Drag-to-place: press a build-bar card and drag onto the battlefield.
+   * A press-and-release on the card itself (no real movement) falls back to
+   * the classic tap-to-select toggle.
+   */
+  const handleCardDragStart = useCallback(
+    (type: TowerTypeId, ev: React.PointerEvent) => {
+      const startX = ev.clientX;
+      const startY = ev.clientY;
+      const wasSelected = engine.selectedTowerType === type;
+      let moved = false;
+      engine.beginPlacement(type);
+
+      const onMove = (me: PointerEvent) => {
+        if (Math.hypot(me.clientX - startX, me.clientY - startY) > 8) moved = true;
+        const pos = clientToLogical(me.clientX, me.clientY);
+        if (pos) engine.pointerMove(pos[0], pos[1]);
+        else engine.pointerLeave();
+      };
+      const onUp = (ue: PointerEvent) => {
+        window.removeEventListener('pointermove', onMove);
+        const pos = clientToLogical(ue.clientX, ue.clientY);
+        if (moved && pos) {
+          // Dropped on the battlefield: place and exit build mode.
+          engine.pointerMove(pos[0], pos[1]);
+          engine.placeTower(type, Math.floor(pos[0] / TILE), Math.floor(pos[1] / TILE));
+          engine.clearSelection();
+          engine.pointerLeave();
+        } else if (!moved && wasSelected) {
+          // Tap on an already-selected card: toggle off.
+          engine.clearSelection();
+        }
+        // Otherwise: plain tap selected the card; tap a tile next (or drag again).
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp, { once: true });
+    },
+    [engine, clientToLogical],
+  );
 
   // Keyboard shortcuts (desktop nicety): space = pause, enter = next wave.
   useEffect(() => {
@@ -174,7 +228,11 @@ export function GameScreen({
             onClose={() => engine.clearSelection()}
           />
         ) : (
-          <TowerBar ui={ui} onSelect={(t) => engine.selectTowerType(t)} />
+          <TowerBar
+            ui={ui}
+            onSelect={(t) => engine.selectTowerType(t)}
+            onDragStart={handleCardDragStart}
+          />
         )}
       </div>
     </div>

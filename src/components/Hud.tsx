@@ -29,7 +29,7 @@ export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onQuit }: Prop
           (ui.endless || ui.wave < ui.totalWaves) && (
           <button
             onClick={onStartWave}
-            className={`animate-pulse rounded-lg px-3 py-1.5 font-bold ${
+            className={`animate-pulse rounded-lg px-3 py-2.5 font-bold sm:py-1.5 ${
               ui.nextWaveIsBoss ? 'bg-red-600 hover:bg-red-500' : 'bg-niko-blue hover:bg-niko-electric'
             }`}
           >
@@ -92,7 +92,7 @@ function IconButton({
     <button
       onClick={onClick}
       title={title}
-      className="min-w-9 rounded-lg border border-niko-line bg-niko-navy px-2 py-1.5 font-bold hover:border-niko-electric"
+      className="min-h-11 min-w-11 rounded-lg border border-niko-line bg-niko-navy px-2 py-1.5 font-bold hover:border-niko-electric sm:min-h-0 sm:min-w-9"
     >
       {label}
     </button>
