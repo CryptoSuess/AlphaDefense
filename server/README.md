@@ -3,17 +3,32 @@
 A tiny global leaderboard for **NIKO: Guardian of Base**. One Worker + one KV
 namespace; fits comfortably in Cloudflare's free tier.
 
-## Deploy (one time, ~5 minutes)
+## Deploy option A: from GitHub Actions (easiest)
 
-1. Create a free Cloudflare account and install wrangler:
-   `npm i -g wrangler && wrangler login`
-2. From this `server/` directory, create the storage namespace:
-   `npx wrangler kv namespace create SCORES`
+The repo ships `.github/workflows/deploy-leaderboard.yml`, which creates the
+KV namespace and deploys the Worker for you.
+
+1. Create a free Cloudflare account.
+2. Create an API token at <https://dash.cloudflare.com/profile/api-tokens>
+   using the **"Edit Cloudflare Workers"** template.
+3. In the GitHub repo: Settings → Secrets and variables → Actions → add
+   `CLOUDFLARE_API_TOKEN` (and `CLOUDFLARE_ACCOUNT_ID` from the dashboard
+   sidebar — recommended).
+4. Run the **Deploy Leaderboard** workflow from the Actions tab. The run
+   summary prints the Worker URL.
+5. Set `leaderboardApiUrl` in `src/data/features.ts` to that URL and merge.
+
+Note: if the very first deploy fails mentioning a missing `workers.dev`
+subdomain, open the Workers page in the Cloudflare dashboard once (it
+registers your subdomain) and re-run the workflow.
+
+## Deploy option B: from your machine
+
+1. `npm i -g wrangler && wrangler login`
+2. From this `server/` directory: `npx wrangler kv namespace create SCORES`
    …and paste the printed `id` into `wrangler.toml`.
-3. Deploy: `npx wrangler deploy`
-   This prints the Worker URL, e.g. `https://niko-leaderboard.<acct>.workers.dev`.
-4. Point the game at it: set `leaderboardApiUrl` in `src/data/features.ts`
-   to that URL and merge — the global panels and score submission switch on.
+3. `npx wrangler deploy` — prints the Worker URL.
+4. Set `leaderboardApiUrl` in `src/data/features.ts` to that URL and merge.
 
 ## API
 
