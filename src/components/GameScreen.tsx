@@ -180,7 +180,7 @@ export function GameScreen({
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="w-full touch-none select-none rounded-xl border border-niko-line"
+          className="w-full touch-none select-none rounded-xl border border-niko-line shadow-[0_0_40px_rgba(37,99,235,0.25)]"
           onPointerDown={(ev) => {
             const [x, y] = toLogical(ev);
             // Track the cell on touch too so the placement preview is visible.

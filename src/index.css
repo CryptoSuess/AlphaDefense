@@ -26,3 +26,30 @@ body {
 .animate-toast-in {
   animation: toast-in 0.2s ease-out;
 }
+
+/* Start-screen content fade-in */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+/* Slow aurora pulse behind start screen */
+@keyframes aurora {
+  0%, 100% { opacity: 0.55; transform: scale(1) translate(0, 0); }
+  33%       { opacity: 0.7;  transform: scale(1.08) translate(-2%, 1%); }
+  66%       { opacity: 0.5;  transform: scale(0.96) translate(1%, -1%); }
+}
+
+.animate-aurora {
+  animation: aurora 12s ease-in-out infinite;
+}

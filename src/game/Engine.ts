@@ -1,6 +1,6 @@
 import { COPY } from '../data/copy';
 import { DIFFICULTIES } from '../data/difficulty';
-import { MAPS, TILE, type GameMap } from '../data/map';
+import { MAPS, TILE, CANVAS_W, type GameMap } from '../data/map';
 import { TOWERS } from '../data/towers';
 import {
   TOTAL_WAVES,
@@ -264,6 +264,12 @@ export class GameEngine {
         this.endGame('victory');
         return;
       }
+      // Celebration sparks across the top of the board.
+      const celebColors = ['#facc15', '#22d3ee', '#f59e0b', '#a3e635'];
+      for (let i = 0; i < 20; i++) {
+        const cx = (0.1 + Math.random() * 0.8) * CANVAS_W;
+        this.particles.push(celebSpark(cx, 30, celebColors[i % celebColors.length]));
+      }
       this.emit({ kind: 'toast', text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾)`, tone: 'success' });
       this.publishUi();
     }
@@ -325,10 +331,16 @@ export class GameEngine {
     this.tracker.onKill(e.def.id, e.def.boss);
     this.tracker.onPawsChanged(this.paws);
     this.particles.push(text(e.x, e.y, `+${reward}🐾`, '#facc15'));
-    // Death burst: a ring plus sparks in the enemy's color.
+    // Death burst: ring(s) + sparks in enemy's colour.
     this.particles.push(ring(e.x, e.y, e.def.radius + 10, e.def.color));
-    const sparkCount = e.def.boss ? 14 : 6;
+    const sparkCount = e.def.boss ? 28 : 8;
     for (let i = 0; i < sparkCount; i++) this.particles.push(spark(e.x, e.y, e.def.color));
+    if (e.def.boss) {
+      // Extra rings + white flash for dramatic boss death.
+      this.particles.push(ring(e.x, e.y, e.def.radius + 30, '#ffffff'));
+      this.particles.push(ring(e.x, e.y, e.def.radius + 55, e.def.color));
+      for (let i = 0; i < 12; i++) this.particles.push(spark(e.x, e.y, '#facc15'));
+    }
     this.sound.play('kill');
     if (e.def.boss) {
       this.shake = Math.min(this.shake + 10, 18);
@@ -582,4 +594,10 @@ function text(x: number, y: number, label: string, color: string): Particle {
 
 function ring(x: number, y: number, radius: number, color: string): Particle {
   return { kind: 'ring', x, y, vx: 0, vy: 0, life: 0.3, maxLife: 0.3, color, radius };
+}
+
+function celebSpark(x: number, y: number, color: string): Particle {
+  const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
+  const speed = 80 + Math.random() * 120;
+  return { kind: 'spark', x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 0.8, maxLife: 0.8, color };
 }
