@@ -1,5 +1,5 @@
 import { ACHIEVEMENTS } from '../data/achievements';
-import type { DifficultyId, EnemyTypeId } from '../types';
+import type { DifficultyId, EnemyTypeId, MapId } from '../types';
 import {
   loadLifetimeStats,
   loadUnlockedAchievements,
@@ -42,12 +42,13 @@ export class AchievementTracker {
     if (this.lifetime.totalKills >= 1) this.unlock('firstBlood');
     if (this.lifetime.totalKills >= 100) this.unlock('packHunter');
     if ((this.lifetime.kills.jeet ?? 0) >= 1000) this.unlock('jeetExterminator');
+    if ((this.lifetime.kills.whale ?? 0) >= 25) this.unlock('whaleWatcher');
     if (this.lifetime.bossesSlain >= 1) this.unlock('fudSlayer');
   }
 
   onTowersChanged(towers: Tower[]): void {
     const types = new Set(towers.map((t) => t.type));
-    if (types.size >= 5) this.unlock('fullArsenal');
+    if (types.size >= 6) this.unlock('fullArsenal');
   }
 
   onPawsChanged(paws: number): void {
@@ -64,11 +65,12 @@ export class AchievementTracker {
     saveLifetimeStats(this.lifetime);
   }
 
-  onVictory(difficulty: DifficultyId, lives: number, maxLives: number): void {
+  onVictory(difficulty: DifficultyId, lives: number, maxLives: number, mapId: MapId): void {
     this.lifetime.victories[difficulty] = (this.lifetime.victories[difficulty] ?? 0) + 1;
     this.unlock('packHolds');
     if (difficulty === 'alpha') this.unlock('alphaGuardian');
     if (lives >= maxLives) this.unlock('flawlessVault');
+    if (mapId === 'doubleCross') this.unlock('doubleCrossed');
     saveLifetimeStats(this.lifetime);
   }
 

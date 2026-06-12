@@ -224,6 +224,7 @@ export class GameEngine {
 
     // Towers acquire targets and fire.
     for (const t of this.towers) {
+      if (t.stats.income !== undefined) continue; // Yield Dens never attack
       t.cooldown -= dt;
       if (t.cooldown > 0) continue;
       const target = t.findTarget(this.enemies);
@@ -255,6 +256,17 @@ export class GameEngine {
       const bonus = Math.round(waveClearBonus(this.wave) * this.rewardMult);
       this.paws += bonus;
       this.stats.pawsEarned += bonus;
+      // Yield Dens pay out their income at every wave clear.
+      let yieldTotal = 0;
+      for (const t of this.towers) {
+        const income = t.stats.income;
+        if (income === undefined) continue;
+        const pay = Math.round(income * this.rewardMult);
+        yieldTotal += pay;
+        this.particles.push(text(t.x, t.y - 26, `+${pay}🐾`, '#fbbf24'));
+      }
+      this.paws += yieldTotal;
+      this.stats.pawsEarned += yieldTotal;
       this.score += waveClearScore(this.wave);
       this.tracker.onPawsChanged(this.paws);
       this.tracker.onWaveCleared(this.wave);
@@ -270,7 +282,12 @@ export class GameEngine {
         const cx = (0.1 + Math.random() * 0.8) * CANVAS_W;
         this.particles.push(celebSpark(cx, 30, celebColors[i % celebColors.length]));
       }
-      this.emit({ kind: 'toast', text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾)`, tone: 'success' });
+      const yieldNote = yieldTotal > 0 ? ` +${yieldTotal} yield` : '';
+      this.emit({
+        kind: 'toast',
+        text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾${yieldNote})`,
+        tone: 'success',
+      });
       this.publishUi();
     }
   }
@@ -304,6 +321,10 @@ export class GameEngine {
 
   /** Applies damage and on-hit effects (burn/slow) to an enemy. */
   private damage(e: Enemy, amount: number, p: Projectile): void {
+    // Whale armor: flat reduction per projectile hit (min 1 dealt). Burn
+    // ticks bypass armor entirely — they happen inside Enemy.update.
+    const armor = e.def.armor ?? 0;
+    if (armor > 0) amount = Math.max(1, amount - armor);
     // Attribute the damage actually applied (no overkill); burn ticks are
     // not attributed since they happen inside Enemy.update.
     const applied = Math.min(amount, Math.max(0, e.hp));
@@ -344,7 +365,8 @@ export class GameEngine {
     this.sound.play('kill');
     if (e.def.boss) {
       this.shake = Math.min(this.shake + 10, 18);
-      this.emit({ kind: 'toast', text: COPY.bossDown, tone: 'success' });
+      const line = e.def.id === 'rugLord' ? COPY.rugLordDown : COPY.bossDown;
+      this.emit({ kind: 'toast', text: line, tone: 'success' });
     }
     // Death-split: the FUD Beast bursts into a bot swarm where it fell.
     const spawn = e.def.deathSpawn;
@@ -364,7 +386,7 @@ export class GameEngine {
     this.waveInProgress = false;
     this.stats.duration = this.now;
     if (status === 'victory') {
-      this.tracker.onVictory(this.difficulty, this.lives, this.maxLives);
+      this.tracker.onVictory(this.difficulty, this.lives, this.maxLives, this.map.def.id);
     }
     this.tracker.onRunEnd();
     this.sound.play(status === 'victory' ? 'victory' : 'gameover');

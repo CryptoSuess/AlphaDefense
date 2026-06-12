@@ -9,16 +9,25 @@ export type TowerTypeId =
   | 'howlCannon'
   | 'blueFlame'
   | 'packScout'
+  | 'yieldDen'
   | 'guardianNiko';
 
 /** Identifier for each enemy type. */
-export type EnemyTypeId = 'jeet' | 'rugger' | 'bot' | 'sniper' | 'shiller' | 'fudBeast';
+export type EnemyTypeId =
+  | 'jeet'
+  | 'rugger'
+  | 'bot'
+  | 'sniper'
+  | 'shiller'
+  | 'whale'
+  | 'fudBeast'
+  | 'rugLord';
 
 /** Difficulty presets selectable on the start screen. */
 export type DifficultyId = 'pup' | 'guardian' | 'alpha';
 
 /** Battlefield maps selectable on the start screen. */
-export type MapId = 'vaultRun' | 'gauntlet' | 'fudSpiral';
+export type MapId = 'vaultRun' | 'gauntlet' | 'fudSpiral' | 'doubleCross';
 
 /** High level game status driven by the engine. */
 export type GameStatus = 'playing' | 'paused' | 'gameover' | 'victory';
@@ -46,6 +55,8 @@ export interface TowerLevelStats {
   slowFactor?: number;
   /** Slow duration in seconds (Pack Scout). */
   slowDuration?: number;
+  /** Paws granted at each wave clear (Yield Den). Towers with income never attack. */
+  income?: number;
   /** Cost to reach this level (level 0 = build cost). */
   cost: number;
 }
@@ -92,7 +103,7 @@ export interface EnemyDef {
   radius: number;
   /** Chance (0..1) to dodge a direct projectile hit. */
   evasion: number;
-  /** Whether this enemy is a boss (FUD Beast). */
+  /** Whether this enemy is a boss (FUD Beast, Rug Lord). */
   boss: boolean;
   /** Heals nearby allies for this many HP/s (Shiller). Scales with wave. */
   healDps?: number;
@@ -100,6 +111,12 @@ export interface EnemyDef {
   healRadius?: number;
   /** Enemies spawned at this unit's position when it dies (FUD Beast). */
   deathSpawn?: { type: EnemyTypeId; count: number };
+  /** Flat damage reduction per projectile hit, min 1 dealt (Whale). Burn ignores armor. */
+  armor?: number;
+  /** Below this HP fraction the enemy enrages and speeds up (Rug Lord). */
+  enrageThreshold?: number;
+  /** Speed multiplier while enraged (Rug Lord). */
+  enrageSpeedMult?: number;
   color: string;
   spriteKey: string;
 }

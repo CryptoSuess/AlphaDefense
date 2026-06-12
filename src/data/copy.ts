@@ -18,6 +18,7 @@ export const COPY = {
   waveStart: (n: number) => `Wave ${n} — Diamond Paws Activated`,
   bossWave: 'FUD has entered the trenches…',
   bossDown: 'FUD Beast slain — The Pack Holds!',
+  rugLordDown: 'Rug Lord rugged — The Pack Holds!',
   vaultHit: 'Base Vault under attack!',
   waveCleared: (n: number) => `Wave ${n} cleared — The Pack Holds`,
   towerPlaced: 'Diamond Paws Activated',

@@ -472,6 +472,35 @@ function drawTowerIcon(
       ctx.fill();
       break;
     }
+    case 'yieldDen': {
+      // Stack of amber coins with a slow glint sweeping across the top.
+      ctx.fillStyle = '#b45309';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(x, y + 8 - i * 7, 13, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = t.def.color;
+      ctx.beginPath();
+      ctx.ellipse(x, y - 6, 13, 5.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Paw mark on the top coin.
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(x, y - 5, 2.2, 0, Math.PI * 2);
+      ctx.arc(x - 4, y - 8, 1.4, 0, Math.PI * 2);
+      ctx.arc(x, y - 9.5, 1.4, 0, Math.PI * 2);
+      ctx.arc(x + 4, y - 8, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Glint sweeps along the coin edge.
+      const sweep = (now * 0.8 + t.id) % 1;
+      ctx.strokeStyle = `rgba(254, 243, 199, ${0.3 + 0.6 * Math.sin(sweep * Math.PI)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(x, y - 6, 13, 5.5, 0, Math.PI * 1.1, Math.PI * 1.6);
+      ctx.stroke();
+      break;
+    }
     case 'guardianNiko': {
       // Stylized NIKO wolf head: black fur, ears, blue forehead marks,
       // white muzzle and a blue flame tail tip curling beside the head.
@@ -612,6 +641,87 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, now: number): void {
         ctx.moveTo(e.x, ey - r * 0.5);
         ctx.lineTo(e.x, ey + r * 0.5);
         ctx.stroke();
+        break;
+      }
+      case 'whale': { // armored bruiser: plated whale with a $ flank mark
+        ctx.translate(e.x, ey);
+        ctx.rotate(e.angle);
+        // Body.
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 1.15, r * 0.75, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Tail fluke.
+        ctx.beginPath();
+        ctx.moveTo(-r * 1.05, 0);
+        ctx.lineTo(-r * 1.5, -r * 0.55);
+        ctx.lineTo(-r * 1.5, r * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        // Armor plate arcs across the back.
+        ctx.strokeStyle = '#3730a3';
+        ctx.lineWidth = 2.5;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.arc(i * r * 0.45, 0, r * 0.62, -Math.PI * 0.75, -Math.PI * 0.25);
+          ctx.stroke();
+        }
+        // Spout dots above the head.
+        ctx.fillStyle = '#c7d2fe';
+        const spout = (now * 2 + e.id) % 1;
+        ctx.globalAlpha = 1 - spout;
+        ctx.beginPath();
+        ctx.arc(r * 0.5, -r * 0.9 - spout * 6, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // $ flank mark.
+        ctx.fillStyle = '#1e1b4b';
+        ctx.font = `bold ${Math.round(r * 0.8)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 0, 1);
+        break;
+      }
+      case 'rugLord': { // boss: rolled rug that enrages (sprints) when wounded
+        const enraged = e.enraged;
+        const wobble = Math.sin(now * (enraged ? 6 : 2.2) + e.id) * (enraged ? 0.2 : 0.08);
+        ctx.translate(e.x, ey);
+        ctx.rotate(e.angle + wobble);
+        if (enraged) {
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 16;
+        }
+        // Rolled-rug body.
+        roundRect(ctx, -r, -r * 0.65, r * 2, r * 1.3, r * 0.5);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // Rug bands.
+        ctx.strokeStyle = '#7f1d1d';
+        ctx.lineWidth = 3;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * r * 0.5, -r * 0.65);
+          ctx.lineTo(i * r * 0.5, r * 0.65);
+          ctx.stroke();
+        }
+        // Spiral end-cap (the rolled face of the rug).
+        ctx.strokeStyle = '#fecaca';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 4; a += 0.3) {
+          const sr = (a / (Math.PI * 4)) * r * 0.5;
+          const px = r * 0.95 + Math.cos(a) * sr * 0.4;
+          const py = Math.sin(a) * sr;
+          if (a === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        // Glaring eyes — flare when enraged.
+        ctx.fillStyle = enraged ? '#fef08a' : '#fca5a5';
+        const eye = enraged ? 4 + Math.sin(now * 10) * 1.2 : 3;
+        ctx.beginPath();
+        ctx.arc(r * 0.45, -r * 0.25, eye, 0, Math.PI * 2);
+        ctx.arc(r * 0.45, r * 0.25, eye, 0, Math.PI * 2);
+        ctx.fill();
         break;
       }
       case 'fudBeast': { // boss: pulsing spiky blob with glaring eyes

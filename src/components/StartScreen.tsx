@@ -57,7 +57,7 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
         <h2 className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-niko-glow">
           {COPY.mapHeading}
         </h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {MAP_ORDER.map((id) => {
             const m = MAPS[id];
             const active = mapId === id;

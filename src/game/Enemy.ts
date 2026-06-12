@@ -57,6 +57,15 @@ export class Enemy {
     this.progress = other.progress;
   }
 
+  /** True while a wounded Rug Lord is sprinting. */
+  get enraged(): boolean {
+    return (
+      this.def.enrageThreshold !== undefined &&
+      this.def.enrageSpeedMult !== undefined &&
+      this.hp <= this.maxHp * this.def.enrageThreshold
+    );
+  }
+
   /** Advances along the path. Returns true if the enemy leaked this frame. */
   update(dt: number, now: number): boolean {
     // Tick burn damage.
@@ -65,7 +74,8 @@ export class Enemy {
     }
     if (now >= this.slowUntil) this.slowFactor = 1;
 
-    let move = this.def.speed * this.speedMult * this.slowFactor * dt;
+    const enrageMult = this.enraged ? this.def.enrageSpeedMult! : 1;
+    let move = this.def.speed * this.speedMult * this.slowFactor * enrageMult * dt;
     while (move > 0 && this.seg < this.waypoints.length) {
       const [tx, ty] = this.waypoints[this.seg];
       const d = Math.hypot(tx - this.x, ty - this.y);
