@@ -56,8 +56,20 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: 'fullArsenal',
     name: 'Full Arsenal',
-    description: 'Have all 5 tower types deployed at once.',
+    description: 'Have all 6 tower types deployed at once.',
     icon: '🛡️',
+  },
+  {
+    id: 'whaleWatcher',
+    name: 'Whale Watcher',
+    description: 'Defeat 25 Whales (lifetime).',
+    icon: '🐋',
+  },
+  {
+    id: 'doubleCrossed',
+    name: 'Double Crossed',
+    description: 'Win a campaign on The Double Cross.',
+    icon: '🔀',
   },
   {
     id: 'diamondHands',

@@ -75,9 +75,17 @@ export function buildWave(wave: number, countMult = 1): SpawnEntry[] {
     groups.push({ type: 'shiller', count: scale(1 + Math.floor(wave / 7)), interval: 4 });
   }
 
-  // Boss waves: FUD Beast(s) arrive after the regular push.
+  // Whales: armored bruisers from wave 10. Burn damage ignores their armor.
+  if (wave >= 10) {
+    groups.push({ type: 'whale', count: scale(1 + Math.floor((wave - 10) / 4)), interval: 3.2 });
+  }
+
+  // Boss waves: alternating bosses arrive after the regular push.
+  // Waves 10/20/30… bring the Rug Lord (enrages when wounded); the rest
+  // stay with the FUD Beast (splits into bots on death).
   if (boss) {
-    groups.push({ type: 'fudBeast', count: Math.floor(wave / BOSS_EVERY), interval: 6 });
+    const bossType: EnemyTypeId = wave % (BOSS_EVERY * 2) === 0 ? 'rugLord' : 'fudBeast';
+    groups.push({ type: bossType, count: Math.floor(wave / BOSS_EVERY), interval: 6 });
   }
 
   // Flatten groups into a single timeline.

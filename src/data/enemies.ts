@@ -76,6 +76,21 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     color: '#2dd4bf',
     spriteKey: 'enemy.shiller',
   },
+  whale: {
+    id: 'whale',
+    name: 'Whale',
+    hp: 300,
+    speed: 32,
+    reward: 30,
+    score: 50,
+    livesCost: 3,
+    radius: 18,
+    evasion: 0,
+    boss: false,
+    armor: 9, // flat reduction per projectile hit; burn DoT bypasses it
+    color: '#818cf8',
+    spriteKey: 'enemy.whale',
+  },
   fudBeast: {
     id: 'fudBeast',
     name: 'FUD Beast',
@@ -90,5 +105,21 @@ export const ENEMIES: Record<EnemyTypeId, EnemyDef> = {
     deathSpawn: { type: 'bot', count: 8 }, // splits into a bot swarm when slain
     color: '#22c55e',
     spriteKey: 'enemy.fudBeast',
+  },
+  rugLord: {
+    id: 'rugLord',
+    name: 'Rug Lord',
+    hp: 850,
+    speed: 40,
+    reward: 140,
+    score: 250,
+    livesCost: 10,
+    radius: 22,
+    evasion: 0,
+    boss: true,
+    enrageThreshold: 0.3, // sprints when wounded — slows are the counter
+    enrageSpeedMult: 1.8,
+    color: '#dc2626',
+    spriteKey: 'enemy.rugLord',
   },
 };

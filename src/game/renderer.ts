@@ -31,16 +31,20 @@ export interface Particle {
 
 // Brand palette (kept in sync with tailwind.config.js).
 const C = {
-  bgA: '#0a0f24',
-  bgB: '#0d1430',
-  grid: '#15203f',
-  path: '#1d2b55',
-  pathEdge: '#2c3f7c',
+  bgA: '#070b1e',
+  bgB: '#0a1030',
+  grid: '#111829',
+  path: '#162045',
+  pathEdge: 'rgba(59,130,246,0.5)',
   vault: '#2563ff',
   white: '#f8fafc',
   danger: '#ef4444',
   hp: '#22c55e',
+  hpMid: '#eab308',
 };
+
+// Per-upgrade-level border colours: base → rank1 → rank2/branch
+const TIER_COLOR = ['#3b82f6', '#22d3ee', '#facc15'] as const;
 
 export function render(ctx: CanvasRenderingContext2D, g: GameEngine): void {
   ctx.save();
@@ -55,19 +59,32 @@ export function render(ctx: CanvasRenderingContext2D, g: GameEngine): void {
   for (const t of g.towers) drawTower(ctx, t, t.id === g.selectedTowerId, g.now);
   for (const e of g.enemies) drawEnemy(ctx, e, g.now);
   for (const p of g.projectiles) {
-    // Motion trail from last frame's position, then the projectile head.
+    const isSplash = !!p.stats.splashRadius;
+    ctx.save();
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = isSplash ? 18 : 10;
+    // Motion trail.
     ctx.strokeStyle = p.color;
-    ctx.globalAlpha = 0.45;
-    ctx.lineWidth = p.stats.splashRadius ? 4 : 2.5;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = isSplash ? 5 : 2.5;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(p.prevX, p.prevY);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
+    // Projectile head.
     ctx.globalAlpha = 1;
     ctx.fillStyle = p.color;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.stats.splashRadius ? 6 : 4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, isSplash ? 8 : 5, 0, Math.PI * 2);
     ctx.fill();
+    // Bright inner core.
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, isSplash ? 3.5 : 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
   for (const pt of g.particles) drawParticle(ctx, pt);
   drawRangePreview(ctx, g);
@@ -94,9 +111,9 @@ function drawBoard(ctx: CanvasRenderingContext2D, map: GameMap, now: number): vo
   ctx.fillStyle = grad;
   ctx.fillRect(-20, -20, CANVAS_W + 40, CANVAS_H + 40);
 
-  // Grid lines.
+  // Grid lines — subtle, thin.
   ctx.strokeStyle = C.grid;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 0.75;
   ctx.beginPath();
   for (let c = 1; c < GRID_COLS; c++) {
     ctx.moveTo(c * TILE, 0);
@@ -108,57 +125,95 @@ function drawBoard(ctx: CanvasRenderingContext2D, map: GameMap, now: number): vo
   }
   ctx.stroke();
 
-  // Ambient circuit-board decorations on some open tiles (deterministic, so
-  // the board doesn't flicker frame to frame).
+  // Ambient decorations on non-path tiles (deterministic — no flicker).
   for (let c = 0; c < GRID_COLS; c++) {
     for (let r = 0; r < GRID_ROWS; r++) {
       if (map.pathCells.has(`${c},${r}`)) continue;
       const n = cellNoise(c, r);
-      if (n > 0.85) {
-        // Glowing node that breathes slowly.
-        const pulse = 0.25 + 0.15 * Math.sin(now * 1.5 + n * 20);
-        ctx.fillStyle = `rgba(59, 130, 246, ${pulse})`;
+      if (n > 0.88) {
+        // Pulsing circuit node.
+        const pulse = 0.2 + 0.18 * Math.sin(now * 1.4 + n * 20);
+        ctx.fillStyle = `rgba(59,130,246,${pulse})`;
         ctx.beginPath();
         ctx.arc((c + 0.5) * TILE, (r + 0.5) * TILE, 2.5, 0, Math.PI * 2);
         ctx.fill();
-      } else if (n > 0.72) {
-        // Faint plus-shaped trace.
-        const cx = (c + 0.5) * TILE;
-        const cy = (r + 0.5) * TILE;
-        ctx.strokeStyle = 'rgba(45, 63, 124, 0.35)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(cx - 5, cy);
-        ctx.lineTo(cx + 5, cy);
-        ctx.moveTo(cx, cy - 5);
-        ctx.lineTo(cx, cy + 5);
+      } else if (n > 0.75) {
+        // Faint hex-ring (blockchain aesthetic).
+        const hx = (c + 0.5) * TILE;
+        const hy = (r + 0.5) * TILE;
+        ctx.strokeStyle = 'rgba(30,50,100,0.4)';
+        ctx.lineWidth = 0.8;
+        polygon(ctx, hx, hy, 7, 6);
         ctx.stroke();
+      } else if (n > 0.62 && n < 0.66) {
+        // Sparse tiny connector dot.
+        ctx.fillStyle = 'rgba(30,50,100,0.5)';
+        ctx.beginPath();
+        ctx.arc((c + 0.5) * TILE, (r + 0.5) * TILE, 1.2, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }
 
-  // Path tiles.
+  // Soft glow halo around the path — single stroke so it's one draw call.
+  const wp = map.waypointsPx;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(20,50,140,0.5)';
+  ctx.lineWidth = TILE * 1.4;
+  ctx.lineCap = 'square';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = '#1e3a8a';
+  ctx.shadowBlur = 24;
+  ctx.beginPath();
+  ctx.moveTo(wp[0][0], wp[0][1]);
+  for (let i = 1; i < wp.length; i++) ctx.lineTo(wp[i][0], wp[i][1]);
+  ctx.stroke();
+  ctx.restore();
+
+  // Path tiles — drawn on top of the glow halo.
   for (const key of map.pathCells) {
     const [c, r] = key.split(',').map(Number);
     ctx.fillStyle = C.path;
     ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
     ctx.strokeStyle = C.pathEdge;
+    ctx.lineWidth = 1;
     ctx.strokeRect(c * TILE + 0.5, r * TILE + 0.5, TILE - 1, TILE - 1);
   }
 
-  // Animated energy flow along the path centerline (dashes drift toward the
-  // vault so the threat direction always reads at a glance).
+  // Animated energy flow: two layers — a fat glowing underlayer + bright dashes.
   ctx.save();
-  ctx.strokeStyle = 'rgba(96, 165, 250, 0.45)';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([10, 26]);
-  ctx.lineDashOffset = -((now * 55) % 36);
+  // Underlayer glow.
+  ctx.strokeStyle = 'rgba(37,99,235,0.18)';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = '#2563ff';
+  ctx.shadowBlur = 12;
   ctx.beginPath();
-  const wp = map.waypointsPx;
+  ctx.moveTo(wp[0][0], wp[0][1]);
+  for (let i = 1; i < wp.length; i++) ctx.lineTo(wp[i][0], wp[i][1]);
+  ctx.stroke();
+  // Dashes drift toward the vault (threat direction visible at a glance).
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(96,165,250,0.65)';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([10, 26]);
+  ctx.lineDashOffset = -((now * 60) % 36);
+  ctx.beginPath();
   ctx.moveTo(wp[0][0], wp[0][1]);
   for (let i = 1; i < wp.length; i++) ctx.lineTo(wp[i][0], wp[i][1]);
   ctx.stroke();
   ctx.restore();
+
+  // Vignette — dark edges give cinematic depth.
+  const vig = ctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.2,
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.75,
+  );
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,12,0.55)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(-20, -20, CANVAS_W + 40, CANVAS_H + 40);
 }
 
 function drawVault(ctx: CanvasRenderingContext2D, g: GameEngine): void {
@@ -289,20 +344,31 @@ function drawTower(
   // Recoil: 1 right after a shot, easing back to 0 over ~0.15s.
   const recoil = Math.max(0, 1 - (now - t.lastShot) / 0.15);
 
+  // Border colour: white when selected, else gold (branched) > cyan (lv2) > blue (lv1) > dim (lv0).
+  const tierColor = t.branch !== null ? '#f59e0b' : TIER_COLOR[Math.min(t.level, 2)];
+  const borderColor = selected ? C.white : tierColor;
+
   if (sprite) {
     ctx.drawImage(sprite, t.col * TILE, t.row * TILE, TILE, TILE);
   } else {
-    // Base plate with a soft idle glow that breathes per-tower.
-    const glow = 0.5 + 0.5 * Math.sin(now * 2 + t.id * 1.7);
+    const glowBreath = 0.5 + 0.5 * Math.sin(now * 2 + t.id * 1.7);
+    const glowBase = 4 + t.level * 4 + (t.branch !== null ? 6 : 0);
     ctx.save();
-    ctx.shadowColor = t.def.color;
-    ctx.shadowBlur = selected ? 14 : 4 + glow * 5;
-    ctx.fillStyle = '#101935';
+    ctx.shadowColor = borderColor;
+    ctx.shadowBlur = selected ? 18 : glowBase + glowBreath * 6;
+    ctx.fillStyle = '#0c1530';
     roundRect(ctx, t.x - 22, t.y - 22, 44, 44, 8);
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = selected ? C.white : t.def.color;
-    ctx.lineWidth = selected ? 3 : 2;
+    // Double stroke for higher-tier towers (outer glow ring).
+    if (t.level >= 2 || t.branch !== null) {
+      ctx.strokeStyle = `${borderColor}44`;
+      ctx.lineWidth = 5;
+      roundRect(ctx, t.x - 24, t.y - 24, 48, 48, 10);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = selected ? 3 : 1.5 + t.level * 0.5;
     roundRect(ctx, t.x - 22, t.y - 22, 44, 44, 8);
     ctx.stroke();
 
@@ -313,15 +379,20 @@ function drawTower(
   if (recoil > 0.55) {
     const fx = t.x + Math.cos(t.angle) * 22;
     const fy = t.y + Math.sin(t.angle) * 22;
-    ctx.fillStyle = `rgba(248, 250, 252, ${(recoil - 0.55) * 2})`;
+    ctx.save();
+    ctx.shadowColor = tierColor;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = `rgba(248,250,252,${(recoil - 0.55) * 2.2})`;
     ctx.beginPath();
-    ctx.arc(fx, fy, 5, 0, Math.PI * 2);
+    ctx.arc(fx, fy, 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 
-  // Level pips under the tower.
+  // Level pips — colour matches tier.
+  const pipColor = t.branch !== null ? '#f59e0b' : t.level >= 2 ? '#facc15' : t.level === 1 ? '#22d3ee' : '#3b82f6';
   for (let i = 0; i <= t.level; i++) {
-    ctx.fillStyle = '#facc15';
+    ctx.fillStyle = pipColor;
     ctx.beginPath();
     ctx.arc(t.x - 8 + i * 8, t.y + 26, 2.5, 0, Math.PI * 2);
     ctx.fill();
@@ -399,6 +470,35 @@ function drawTowerIcon(
       ctx.beginPath();
       ctx.arc(x, y + 8, 3, 0, Math.PI * 2);
       ctx.fill();
+      break;
+    }
+    case 'yieldDen': {
+      // Stack of amber coins with a slow glint sweeping across the top.
+      ctx.fillStyle = '#b45309';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(x, y + 8 - i * 7, 13, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = t.def.color;
+      ctx.beginPath();
+      ctx.ellipse(x, y - 6, 13, 5.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Paw mark on the top coin.
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(x, y - 5, 2.2, 0, Math.PI * 2);
+      ctx.arc(x - 4, y - 8, 1.4, 0, Math.PI * 2);
+      ctx.arc(x, y - 9.5, 1.4, 0, Math.PI * 2);
+      ctx.arc(x + 4, y - 8, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Glint sweeps along the coin edge.
+      const sweep = (now * 0.8 + t.id) % 1;
+      ctx.strokeStyle = `rgba(254, 243, 199, ${0.3 + 0.6 * Math.sin(sweep * Math.PI)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(x, y - 6, 13, 5.5, 0, Math.PI * 1.1, Math.PI * 1.6);
+      ctx.stroke();
       break;
     }
     case 'guardianNiko': {
@@ -543,6 +643,87 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, now: number): void {
         ctx.stroke();
         break;
       }
+      case 'whale': { // armored bruiser: plated whale with a $ flank mark
+        ctx.translate(e.x, ey);
+        ctx.rotate(e.angle);
+        // Body.
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 1.15, r * 0.75, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Tail fluke.
+        ctx.beginPath();
+        ctx.moveTo(-r * 1.05, 0);
+        ctx.lineTo(-r * 1.5, -r * 0.55);
+        ctx.lineTo(-r * 1.5, r * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        // Armor plate arcs across the back.
+        ctx.strokeStyle = '#3730a3';
+        ctx.lineWidth = 2.5;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.arc(i * r * 0.45, 0, r * 0.62, -Math.PI * 0.75, -Math.PI * 0.25);
+          ctx.stroke();
+        }
+        // Spout dots above the head.
+        ctx.fillStyle = '#c7d2fe';
+        const spout = (now * 2 + e.id) % 1;
+        ctx.globalAlpha = 1 - spout;
+        ctx.beginPath();
+        ctx.arc(r * 0.5, -r * 0.9 - spout * 6, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // $ flank mark.
+        ctx.fillStyle = '#1e1b4b';
+        ctx.font = `bold ${Math.round(r * 0.8)}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 0, 1);
+        break;
+      }
+      case 'rugLord': { // boss: rolled rug that enrages (sprints) when wounded
+        const enraged = e.enraged;
+        const wobble = Math.sin(now * (enraged ? 6 : 2.2) + e.id) * (enraged ? 0.2 : 0.08);
+        ctx.translate(e.x, ey);
+        ctx.rotate(e.angle + wobble);
+        if (enraged) {
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 16;
+        }
+        // Rolled-rug body.
+        roundRect(ctx, -r, -r * 0.65, r * 2, r * 1.3, r * 0.5);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // Rug bands.
+        ctx.strokeStyle = '#7f1d1d';
+        ctx.lineWidth = 3;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * r * 0.5, -r * 0.65);
+          ctx.lineTo(i * r * 0.5, r * 0.65);
+          ctx.stroke();
+        }
+        // Spiral end-cap (the rolled face of the rug).
+        ctx.strokeStyle = '#fecaca';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 4; a += 0.3) {
+          const sr = (a / (Math.PI * 4)) * r * 0.5;
+          const px = r * 0.95 + Math.cos(a) * sr * 0.4;
+          const py = Math.sin(a) * sr;
+          if (a === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        // Glaring eyes — flare when enraged.
+        ctx.fillStyle = enraged ? '#fef08a' : '#fca5a5';
+        const eye = enraged ? 4 + Math.sin(now * 10) * 1.2 : 3;
+        ctx.beginPath();
+        ctx.arc(r * 0.45, -r * 0.25, eye, 0, Math.PI * 2);
+        ctx.arc(r * 0.45, r * 0.25, eye, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
       case 'fudBeast': { // boss: pulsing spiky blob with glaring eyes
         const pulse = 1 + 0.07 * Math.sin(now * 3 + e.id);
         ctx.translate(e.x, ey);
@@ -566,31 +747,59 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, now: number): void {
 
   // Status tints.
   if (e.slowFactor < 1) {
-    ctx.strokeStyle = 'rgba(191, 219, 254, 0.9)';
+    ctx.save();
+    ctx.shadowColor = '#bfdbfe';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = 'rgba(191,219,254,0.85)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(e.x, ey, r + 3, 0, Math.PI * 2);
+    ctx.arc(e.x, ey, r + 4, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
   }
   if (e.burnDps > 0) {
-    // Flickering blue embers above a burning enemy.
-    for (let i = 0; i < 2; i++) {
-      const fx = e.x + Math.sin(now * 11 + e.id + i * 3) * r * 0.5;
-      const fy = ey - r - 2 - ((now * 26 + i * 9) % 9);
-      ctx.fillStyle = `rgba(56, 189, 248, ${0.8 - ((now * 3 + i) % 1) * 0.5})`;
+    // Flickering orange-red embers rising from burning enemies.
+    for (let i = 0; i < 3; i++) {
+      const fx = e.x + Math.sin(now * 11 + e.id + i * 2.1) * r * 0.6;
+      const fy = ey - r - 2 - ((now * 28 + i * 7) % 12);
+      const emberAlpha = 0.85 - ((now * 3 + i) % 1) * 0.5;
+      const emberColor = i === 1 ? `rgba(251,146,60,${emberAlpha})` : `rgba(239,68,68,${emberAlpha})`;
+      ctx.fillStyle = emberColor;
       ctx.beginPath();
       ctx.arc(fx, fy, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // Health bar.
-  const w = Math.max(r * 2, 22);
+  // Health bar — gradient fill, rounded, boss bar is taller.
+  const isBoss = e.def.boss ?? false;
+  const hbW = Math.max(r * 2, isBoss ? 44 : 22);
+  const hbH = isBoss ? 6 : 4;
   const frac = Math.max(0, e.hp / e.maxHp);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(e.x - w / 2, ey - r - 10, w, 4);
-  ctx.fillStyle = frac > 0.4 ? C.hp : C.danger;
-  ctx.fillRect(e.x - w / 2, ey - r - 10, w * frac, 4);
+  const hbX = e.x - hbW / 2;
+  const hbY = ey - r - 12;
+  const hpColor = frac > 0.5 ? C.hp : frac > 0.25 ? C.hpMid : C.danger;
+  // Dark background.
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  roundRect(ctx, hbX - 1, hbY - 1, hbW + 2, hbH + 2, (hbH + 2) / 2);
+  ctx.fill();
+  // Filled portion.
+  if (frac > 0) {
+    ctx.save();
+    ctx.shadowColor = hpColor;
+    ctx.shadowBlur = isBoss ? 6 : 3;
+    ctx.fillStyle = hpColor;
+    roundRect(ctx, hbX, hbY, hbW * frac, hbH, hbH / 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Boss label above bar.
+  if (isBoss) {
+    ctx.fillStyle = 'rgba(239,68,68,0.9)';
+    ctx.font = 'bold 9px system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('BOSS', e.x, hbY - 2);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -602,20 +811,28 @@ function drawParticle(ctx: CanvasRenderingContext2D, p: Particle): void {
   ctx.save();
   ctx.globalAlpha = alpha;
   if (p.kind === 'text' && p.label) {
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
     ctx.fillStyle = p.color;
     ctx.font = 'bold 13px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(p.label, p.x, p.y);
   } else if (p.kind === 'ring' && p.radius) {
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
     ctx.strokeStyle = p.color;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5 + (1 - alpha) * 2;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius * (1 - alpha * 0.5), 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, p.radius * (1 - alpha * 0.6), 0, Math.PI * 2);
     ctx.stroke();
   } else {
+    // Spark: starts big and bright, shrinks and fades.
+    const sparkR = 1.5 + alpha * 3.5;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
     ctx.fillStyle = p.color;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, sparkR, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();

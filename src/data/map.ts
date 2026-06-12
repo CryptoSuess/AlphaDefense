@@ -118,6 +118,20 @@ export const MAPS: Record<MapId, GameMap> = {
     ],
     vaultCell: [5, 5],
   }),
+  doubleCross: new GameMap({
+    id: 'doubleCross',
+    name: 'The Double Cross',
+    description: 'The path crosses itself: every FUD walks the junction twice. Stack the intersection.',
+    waypoints: [
+      [-1, 2],
+      [12, 2],
+      [12, 6],
+      [3, 6],
+      [3, 0],
+      [16, 0],
+    ],
+    vaultCell: [15, 0],
+  }),
 };
 
-export const MAP_ORDER: MapId[] = ['vaultRun', 'gauntlet', 'fudSpiral'];
+export const MAP_ORDER: MapId[] = ['vaultRun', 'gauntlet', 'fudSpiral', 'doubleCross'];

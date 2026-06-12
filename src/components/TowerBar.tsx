@@ -45,8 +45,11 @@ export function TowerBar({ ui, onSelect, onDragStart }: Props) {
             }`}
           >
             <span
-              className="mb-1 inline-block h-3 w-3 rounded-full"
-              style={{ backgroundColor: def.color }}
+              className="mb-1.5 inline-block h-5 w-5 rounded-full ring-1 ring-white/20"
+              style={{
+                backgroundColor: def.color,
+                boxShadow: `0 0 8px ${def.color}99`,
+              }}
               aria-hidden
             />
             <span className="text-[11px] font-bold leading-tight sm:text-xs">{def.name}</span>

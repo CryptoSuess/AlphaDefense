@@ -31,8 +31,19 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
   const weeklyBest = highScores[weeklyScoreKey(weekly.weekKey)];
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-niko-deep p-4 text-white">
-      <div className="flex flex-col items-center gap-2 text-center">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center gap-6 overflow-hidden bg-niko-deep p-4 text-white">
+      {/* Ambient aurora blobs */}
+      <div
+        aria-hidden
+        className="animate-aurora pointer-events-none absolute left-1/4 top-1/4 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-niko-blue/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="animate-aurora pointer-events-none absolute bottom-1/4 right-1/4 h-96 w-96 translate-x-1/2 translate-y-1/2 rounded-full bg-niko-flame/8 blur-3xl"
+        style={{ animationDelay: '4s' }}
+      />
+
+      <div className="animate-fade-up relative flex flex-col items-center gap-2 text-center">
         <NikoLogo size={96} />
         <h1 className="bg-gradient-to-r from-niko-glow to-white bg-clip-text font-display text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">
           {COPY.title}
@@ -42,11 +53,11 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
       </div>
 
       {/* Map selection */}
-      <div className="w-full max-w-xl">
+      <div className="animate-fade-up relative w-full max-w-xl" style={{ animationDelay: '0.1s' }}>
         <h2 className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-niko-glow">
           {COPY.mapHeading}
         </h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {MAP_ORDER.map((id) => {
             const m = MAPS[id];
             const active = mapId === id;
@@ -76,7 +87,7 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
       </div>
 
       {/* Difficulty selection */}
-      <div className="w-full max-w-xl">
+      <div className="animate-fade-up relative w-full max-w-xl" style={{ animationDelay: '0.2s' }}>
         <h2 className="mb-2 text-center text-xs font-bold uppercase tracking-widest text-niko-glow">
           {COPY.difficultyHeading}
         </h2>
@@ -111,13 +122,14 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
 
       <button
         onClick={() => onStart(difficulty, mapId)}
-        className="rounded-xl bg-niko-blue px-10 py-4 text-lg font-extrabold uppercase tracking-wide shadow-glow transition hover:bg-niko-electric active:scale-95"
+        className="animate-fade-up relative rounded-xl bg-niko-blue px-10 py-4 text-lg font-extrabold uppercase tracking-wide shadow-glow transition hover:bg-niko-electric active:scale-95"
+        style={{ animationDelay: '0.3s' }}
       >
         {COPY.startButton}
       </button>
 
       {/* Weekly Trench: identical seeded waves for every player this week. */}
-      <div className="w-full max-w-xl rounded-xl border border-niko-blue/50 bg-niko-panel/80 p-4">
+      <div className="animate-fade-up relative w-full max-w-xl rounded-xl border border-niko-blue/50 bg-niko-panel/80 p-4" style={{ animationDelay: '0.4s' }}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-extrabold text-niko-glow">

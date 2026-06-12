@@ -89,6 +89,18 @@ export const TOWERS: Record<TowerTypeId, TowerDef> = {
       { damage: 12, range: 165, fireRate: 1.0, projectileSpeed: 500, slowFactor: 0.4, slowDuration: 2.8, cost: 90 },
     ],
   },
+  yieldDen: {
+    id: 'yieldDen',
+    name: 'Yield Den',
+    tagline: 'Farms Paws at every wave clear. Passive income, zero bite.',
+    color: '#fbbf24',
+    spriteKey: 'tower.yieldDen',
+    levels: [
+      { damage: 0, range: 0, fireRate: 0, projectileSpeed: 0, income: 15, cost: 100 },
+      { damage: 0, range: 0, fireRate: 0, projectileSpeed: 0, income: 26, cost: 80 },
+      { damage: 0, range: 0, fireRate: 0, projectileSpeed: 0, income: 45, cost: 140 },
+    ],
+  },
   guardianNiko: {
     id: 'guardianNiko',
     name: 'Guardian NIKO',
@@ -109,6 +121,7 @@ export const TOWER_ORDER: TowerTypeId[] = [
   'packScout',
   'blueFlame',
   'howlCannon',
+  'yieldDen',
   'guardianNiko',
 ];
 

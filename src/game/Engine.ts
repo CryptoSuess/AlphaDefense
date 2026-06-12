@@ -1,6 +1,6 @@
 import { COPY } from '../data/copy';
 import { DIFFICULTIES } from '../data/difficulty';
-import { MAPS, TILE, type GameMap } from '../data/map';
+import { MAPS, TILE, CANVAS_W, type GameMap } from '../data/map';
 import { TOWERS } from '../data/towers';
 import {
   TOTAL_WAVES,
@@ -224,6 +224,7 @@ export class GameEngine {
 
     // Towers acquire targets and fire.
     for (const t of this.towers) {
+      if (t.stats.income !== undefined) continue; // Yield Dens never attack
       t.cooldown -= dt;
       if (t.cooldown > 0) continue;
       const target = t.findTarget(this.enemies);
@@ -255,6 +256,17 @@ export class GameEngine {
       const bonus = Math.round(waveClearBonus(this.wave) * this.rewardMult);
       this.paws += bonus;
       this.stats.pawsEarned += bonus;
+      // Yield Dens pay out their income at every wave clear.
+      let yieldTotal = 0;
+      for (const t of this.towers) {
+        const income = t.stats.income;
+        if (income === undefined) continue;
+        const pay = Math.round(income * this.rewardMult);
+        yieldTotal += pay;
+        this.particles.push(text(t.x, t.y - 26, `+${pay}🐾`, '#fbbf24'));
+      }
+      this.paws += yieldTotal;
+      this.stats.pawsEarned += yieldTotal;
       this.score += waveClearScore(this.wave);
       this.tracker.onPawsChanged(this.paws);
       this.tracker.onWaveCleared(this.wave);
@@ -264,7 +276,18 @@ export class GameEngine {
         this.endGame('victory');
         return;
       }
-      this.emit({ kind: 'toast', text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾)`, tone: 'success' });
+      // Celebration sparks across the top of the board.
+      const celebColors = ['#facc15', '#22d3ee', '#f59e0b', '#a3e635'];
+      for (let i = 0; i < 20; i++) {
+        const cx = (0.1 + Math.random() * 0.8) * CANVAS_W;
+        this.particles.push(celebSpark(cx, 30, celebColors[i % celebColors.length]));
+      }
+      const yieldNote = yieldTotal > 0 ? ` +${yieldTotal} yield` : '';
+      this.emit({
+        kind: 'toast',
+        text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾${yieldNote})`,
+        tone: 'success',
+      });
       this.publishUi();
     }
   }
@@ -298,6 +321,10 @@ export class GameEngine {
 
   /** Applies damage and on-hit effects (burn/slow) to an enemy. */
   private damage(e: Enemy, amount: number, p: Projectile): void {
+    // Whale armor: flat reduction per projectile hit (min 1 dealt). Burn
+    // ticks bypass armor entirely — they happen inside Enemy.update.
+    const armor = e.def.armor ?? 0;
+    if (armor > 0) amount = Math.max(1, amount - armor);
     // Attribute the damage actually applied (no overkill); burn ticks are
     // not attributed since they happen inside Enemy.update.
     const applied = Math.min(amount, Math.max(0, e.hp));
@@ -325,14 +352,21 @@ export class GameEngine {
     this.tracker.onKill(e.def.id, e.def.boss);
     this.tracker.onPawsChanged(this.paws);
     this.particles.push(text(e.x, e.y, `+${reward}🐾`, '#facc15'));
-    // Death burst: a ring plus sparks in the enemy's color.
+    // Death burst: ring(s) + sparks in enemy's colour.
     this.particles.push(ring(e.x, e.y, e.def.radius + 10, e.def.color));
-    const sparkCount = e.def.boss ? 14 : 6;
+    const sparkCount = e.def.boss ? 28 : 8;
     for (let i = 0; i < sparkCount; i++) this.particles.push(spark(e.x, e.y, e.def.color));
+    if (e.def.boss) {
+      // Extra rings + white flash for dramatic boss death.
+      this.particles.push(ring(e.x, e.y, e.def.radius + 30, '#ffffff'));
+      this.particles.push(ring(e.x, e.y, e.def.radius + 55, e.def.color));
+      for (let i = 0; i < 12; i++) this.particles.push(spark(e.x, e.y, '#facc15'));
+    }
     this.sound.play('kill');
     if (e.def.boss) {
       this.shake = Math.min(this.shake + 10, 18);
-      this.emit({ kind: 'toast', text: COPY.bossDown, tone: 'success' });
+      const line = e.def.id === 'rugLord' ? COPY.rugLordDown : COPY.bossDown;
+      this.emit({ kind: 'toast', text: line, tone: 'success' });
     }
     // Death-split: the FUD Beast bursts into a bot swarm where it fell.
     const spawn = e.def.deathSpawn;
@@ -352,7 +386,7 @@ export class GameEngine {
     this.waveInProgress = false;
     this.stats.duration = this.now;
     if (status === 'victory') {
-      this.tracker.onVictory(this.difficulty, this.lives, this.maxLives);
+      this.tracker.onVictory(this.difficulty, this.lives, this.maxLives, this.map.def.id);
     }
     this.tracker.onRunEnd();
     this.sound.play(status === 'victory' ? 'victory' : 'gameover');
@@ -582,4 +616,10 @@ function text(x: number, y: number, label: string, color: string): Particle {
 
 function ring(x: number, y: number, radius: number, color: string): Particle {
   return { kind: 'ring', x, y, vx: 0, vy: 0, life: 0.3, maxLife: 0.3, color, radius };
+}
+
+function celebSpark(x: number, y: number, color: string): Particle {
+  const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
+  const speed = 80 + Math.random() * 120;
+  return { kind: 'spark', x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 0.8, maxLife: 0.8, color };
 }

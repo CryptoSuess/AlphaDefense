@@ -52,19 +52,27 @@ export function TowerPanel({
         <div className="text-xs text-slate-400">{def.tagline}</div>
       </div>
 
-      <div className="flex gap-3 text-xs text-niko-ice">
-        <StatDelta label="DMG" cur={stats.damage} next={next?.damage} />
-        <StatDelta label="RNG" cur={stats.range} next={next?.range} />
-        <StatDelta label="RATE" cur={stats.fireRate} next={next?.fireRate} />
-      </div>
+      {stats.income !== undefined ? (
+        <div className="flex gap-3 text-xs text-niko-ice">
+          <StatDelta label="YIELD/WAVE" cur={stats.income} next={next?.income} />
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-3 text-xs text-niko-ice">
+            <StatDelta label="DMG" cur={stats.damage} next={next?.damage} />
+            <StatDelta label="RNG" cur={stats.range} next={next?.range} />
+            <StatDelta label="RATE" cur={stats.fireRate} next={next?.fireRate} />
+          </div>
 
-      <button
-        onClick={() => onCycleTargeting(tower.id)}
-        title="Cycle targeting: First (closest to vault) → Strong (most HP) → Close (nearest)"
-        className="rounded-lg border border-niko-line bg-niko-navy px-3 py-1.5 text-xs font-bold hover:border-niko-electric"
-      >
-        {TARGETING_LABEL[tower.targeting]}
-      </button>
+          <button
+            onClick={() => onCycleTargeting(tower.id)}
+            title="Cycle targeting: First (closest to vault) → Strong (most HP) → Close (nearest)"
+            className="rounded-lg border border-niko-line bg-niko-navy px-3 py-1.5 text-xs font-bold hover:border-niko-electric"
+          >
+            {TARGETING_LABEL[tower.targeting]}
+          </button>
+        </>
+      )}
 
       <div className="ml-auto flex flex-wrap items-center gap-2">
         {tower.upgradeCost !== null ? (
