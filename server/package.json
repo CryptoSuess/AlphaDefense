@@ -1,0 +1,16 @@
+{
+  "name": "niko-leaderboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Global leaderboard API (Cloudflare Worker) for NIKO: Guardian of Base.",
+  "type": "module",
+  "scripts": {
+    "deploy": "npx wrangler deploy",
+    "dev": "npx wrangler dev",
+    "test": "node test/eip191.test.js"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0"
+  }
+}

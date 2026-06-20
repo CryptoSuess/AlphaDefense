@@ -19,18 +19,21 @@
  *   - per-IP hourly rate limit
  *   - one entry per player name per board (best score wins)
  *   - weekly boards reject future week keys
- *   - TODO: EIP-191 wallet-signature verification (verify `address` actually
- *     signed the score payload) once wallet-gated prizes exist.
+ *   - EIP-191 signature check: a submission that claims a wallet `address` must
+ *     include a `signature` proving that wallet signed the score (see eip191.js).
+ *     Anonymous submissions (no address) are still accepted.
  */
+import { buildScoreMessage, verifySignature } from './eip191.js';
 
 const TOP_N = 100;
 const RATE_LIMIT_PER_HOUR = 20;
 const MAX_LIMIT = 100;
 
 const BOARD_KEY_RE =
-  /^(vaultRun|gauntlet|fudSpiral):(pup|guardian|alpha)$|^weekly:\d{4}-W\d{2}$/;
+  /^(vaultRun|gauntlet|fudSpiral|doubleCross):(pup|guardian|alpha)$|^weekly:\d{4}-W\d{2}$/;
 const PLAYER_RE = /^[A-Za-z0-9 _.\-…]{1,24}$/;
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const SIGNATURE_RE = /^0x[0-9a-fA-F]{130}$/;
 
 /** Generous upper bound on a legitimate score for the wave reached. */
 function maxPlausibleScore(wave) {
@@ -86,7 +89,7 @@ async function postScore(request, env, cors) {
   } catch {
     return json({ error: 'invalid JSON' }, 400, cors);
   }
-  const { key, player, score, wave, address } = body ?? {};
+  const { key, player, score, wave, address, signature } = body ?? {};
 
   if (typeof key !== 'string' || !BOARD_KEY_RE.test(key)) {
     return json({ error: 'invalid board key' }, 400, cors);
@@ -102,6 +105,18 @@ async function postScore(request, env, cors) {
   }
   if (address !== undefined && (typeof address !== 'string' || !ADDRESS_RE.test(address))) {
     return json({ error: 'invalid address' }, 400, cors);
+  }
+  // A claimed wallet address must prove ownership with a valid EIP-191
+  // signature over the canonical score message. No address → no signature
+  // needed (anonymous Wolf submission).
+  if (address !== undefined) {
+    if (typeof signature !== 'string' || !SIGNATURE_RE.test(signature)) {
+      return json({ error: 'missing signature' }, 400, cors);
+    }
+    const message = buildScoreMessage({ key, score, wave, address });
+    if (!verifySignature(message, signature, address)) {
+      return json({ error: 'bad signature' }, 401, cors);
+    }
   }
   // Weekly boards: only the current (or past) week may receive scores.
   if (key.startsWith('weekly:') && key.slice(7) > currentWeekKey()) {

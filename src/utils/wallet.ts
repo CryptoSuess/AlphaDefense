@@ -108,6 +108,22 @@ export async function disconnectWallet(): Promise<void> {
   notify();
 }
 
+/**
+ * Requests an EIP-191 `personal_sign` of `message` from the connected wallet.
+ * Returns the 65-byte hex signature (0x…), or null when there's no wallet or
+ * the user rejects the prompt. Used to prove wallet ownership of a score.
+ */
+export async function signMessage(message: string): Promise<string | null> {
+  const eth = typeof window !== 'undefined' ? window.ethereum : undefined;
+  if (!eth || !address) return null;
+  try {
+    const sig = await eth.request({ method: 'personal_sign', params: [message, address] });
+    return typeof sig === 'string' ? sig : null;
+  } catch {
+    return null; // user rejected the signature prompt
+  }
+}
+
 /** 0x1234…abcd display form. */
 export function shortAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;

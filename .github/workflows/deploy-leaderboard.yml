@@ -36,6 +36,14 @@ jobs:
             exit 1
           fi
 
+      # Installs the Worker's runtime deps (@noble crypto for signature
+      # verification) so wrangler bundles them into the deploy.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify signature module
+        run: npm test
+
       # Creates the SCORES KV namespace on first run and injects its id into
       # wrangler.toml; later runs find the existing namespace by title.
       - name: Ensure KV namespace
