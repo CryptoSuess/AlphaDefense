@@ -12,8 +12,13 @@
  *    so every player faces identical waves for the week.
  */
 import { FEATURES } from '../data/features';
-import { loadHighScores, submitHighScore } from './storage';
-import { connectWallet, disconnectWallet, getAddress as getWalletAddress } from './wallet';
+import { getPlayerName, loadHighScores, submitHighScore } from './storage';
+import {
+  connectWallet,
+  disconnectWallet,
+  getAddress as getWalletAddress,
+  signMessage,
+} from './wallet';
 
 // ---------------------------------------------------------------------------
 // Wallet (future)
@@ -52,6 +57,27 @@ export interface LeaderboardEntry {
   score: number;
   wave: number;
   address?: string;
+  /** EIP-191 signature proving `address` owns this score (added at submit). */
+  signature?: string;
+}
+
+/**
+ * Canonical message a player signs to claim a score under their wallet. MUST
+ * stay byte-identical to buildScoreMessage in server/src/eip191.js.
+ */
+function buildScoreMessage(e: {
+  key: string;
+  score: number;
+  wave: number;
+  address: string;
+}): string {
+  return [
+    'NIKO: Guardian of Base — verified score',
+    `board: ${e.key}`,
+    `score: ${e.score}`,
+    `wave: ${e.wave}`,
+    `wallet: ${e.address.toLowerCase()}`,
+  ].join('\n');
 }
 
 export interface LeaderboardProvider {
@@ -74,11 +100,27 @@ const localLeaderboard: LeaderboardProvider = {
 function createRemoteLeaderboard(baseUrl: string): LeaderboardProvider {
   return {
     async submit(entry) {
+      // Claiming a wallet address requires signing the score. If the player
+      // declines (or has no wallet), fall back to an anonymous submission so
+      // the run still counts — just without the verified address.
+      let payload = entry;
+      if (entry.address) {
+        const message = buildScoreMessage({
+          key: entry.key,
+          score: entry.score,
+          wave: entry.wave,
+          address: entry.address,
+        });
+        const signature = await signMessage(message);
+        payload = signature
+          ? { ...entry, signature }
+          : { ...entry, address: undefined, player: getPlayerName() };
+      }
       try {
         await fetch(`${baseUrl}/scores`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entry),
+          body: JSON.stringify(payload),
         });
       } catch {
         /* offline / API down — local records still work */

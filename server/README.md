@@ -35,10 +35,21 @@ registers your subdomain) and re-run the workflow.
 | Method | Path      | Description |
 | ------ | --------- | ----------- |
 | GET    | `/scores?key=<board>&limit=10` | Top scores for a board |
-| POST   | `/scores` `{ key, player, score, wave, address? }` | Submit a score |
+| POST   | `/scores` `{ key, player, score, wave, address?, signature? }` | Submit a score |
 
 Board keys match the game's local storage keys: `"<mapId>:<difficulty>"`
-(campaign) and `"weekly:<isoWeek>"` (Weekly Trench).
+(campaign, maps `vaultRun`/`gauntlet`/`fudSpiral`/`doubleCross`) and
+`"weekly:<isoWeek>"` (Weekly Trench).
+
+A submission that includes a wallet `address` **must** also include a
+`signature`: an EIP-191 (`personal_sign`) signature of the canonical score
+message (see `src/eip191.js`). The Worker rebuilds that message and rejects the
+entry unless the signature recovers to `address`. Anonymous submissions (no
+`address`, no `signature`) are still accepted under a `Wolf-####` name.
+
+Dependencies: `@noble/curves` + `@noble/hashes` (signature recovery). The
+deploy workflow runs `npm ci` before `wrangler deploy` so they're bundled; run
+`npm test` in this directory to exercise the verification round-trip.
 
 ## Anti-cheat: current state and roadmap
 
@@ -47,17 +58,17 @@ Baseline protections (implemented):
 - Strict payload validation, plausibility cap (score ≤ 3000 × wave reached),
   per-IP hourly rate limit, one entry per player name (best wins), future
   week keys rejected, CORS locked to the game origin.
+- **Wallet signatures** — a claimed `address` must prove ownership with an
+  EIP-191 signature over the score, so leaderboard entries that show a wallet
+  are bound to that real wallet.
 
 Honest limitations: a determined cheater can still craft a plausible fake
-score — client-submitted scores can never be fully trusted. Before attaching
-prizes/tournaments, add (in rough order of value):
+*anonymous* score — client-submitted scores can never be fully trusted. Before
+attaching prizes/tournaments, add (in rough order of value):
 
-1. **Wallet signatures** — require an EIP-191 signature of
-   `{key, score, wave}` by `address` (verify with viem in the Worker), so
-   entries are at least bound to a real wallet.
-2. **Replay validation** — the game engine is deterministic given a seed and
+1. **Replay validation** — the game engine is deterministic given a seed and
    an input log; submitting the input log lets the server re-simulate and
    verify the score exactly. The Weekly Trench is already seeded, so it's the
    natural first target.
-3. **Durable Object per board** — removes the KV read-modify-write race if
+2. **Durable Object per board** — removes the KV read-modify-write race if
    submission volume grows.
