@@ -1,6 +1,7 @@
 import { COPY } from '../data/copy';
 import { DIFFICULTIES } from '../data/difficulty';
 import { MAPS, TILE, CANVAS_W, type GameMap } from '../data/map';
+import { SYNERGIES } from '../data/synergies';
 import { TOWERS } from '../data/towers';
 import {
   TOTAL_WAVES,
@@ -52,11 +53,26 @@ export class GameEngine {
   timeScale = 1;
   /** True after the player chose to keep playing past the wave-25 victory. */
   endless = false;
+  /** When true the next wave launches automatically after a short cooldown. */
+  autoWave = false;
+  /** Seconds remaining in the auto-wave countdown (null = not counting). */
+  private autoWaveCountdown: number | null = null;
   /** Screen-shake intensity in px, decays each frame. */
   shake = 0;
   /** Game time of the last Vault hit (renderer flashes the vault briefly). */
   lastVaultHit = -10;
   readonly map: GameMap;
+
+  // --- Feature: Tower Synergy Network ---
+  activeSynergies: Set<string> = new Set();
+
+  // --- Feature: Pack Energy / Bull Run ---
+  packEnergy = 0;
+  packBullRun = false;
+  packBullRunTimer = 0;
+
+  // --- Feature: Wave Intel Preview ---
+  nextWavePreview: Array<{ type: import('../types').EnemyTypeId; count: number }> | null = null;
 
   // --- interaction state ----------------------------------------------------
   selectedTowerType: TowerTypeId | null = null;
@@ -173,6 +189,23 @@ export class GameEngine {
   private update(dt: number): void {
     this.now += dt;
 
+    // Pack Energy decays slowly during waves (not between them).
+    if (this.waveInProgress && !this.packBullRun && this.packEnergy > 0) {
+      this.packEnergy = Math.max(0, this.packEnergy - 1.5 * dt);
+    }
+
+    // Bull Run countdown.
+    if (this.packBullRun) {
+      this.packBullRunTimer -= dt;
+      if (this.packBullRunTimer <= 0) {
+        this.packBullRun = false;
+        this.packBullRunTimer = 0;
+        this.packEnergy = 0;
+        this.emit({ kind: 'toast', text: '🐾 Bull Run ended — keep the Pack alive!', tone: 'info' });
+        this.publishUi();
+      }
+    }
+
     // Spawn scheduled enemies.
     if (this.waveInProgress) {
       this.waveClock += dt;
@@ -288,14 +321,40 @@ export class GameEngine {
         text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾${yieldNote})`,
         tone: 'success',
       });
+      // Build the intel preview for the next wave.
+      const previewWave = this.wave + 1;
+      if (!this.endless && previewWave > TOTAL_WAVES) {
+        this.nextWavePreview = null;
+      } else {
+        this.nextWavePreview = this.buildWavePreview(previewWave);
+      }
+      // Arm the auto-wave countdown if the feature is on and the run continues.
+      if (this.autoWave && (this.endless || this.wave < TOTAL_WAVES)) {
+        this.autoWaveCountdown = 2;
+      }
       this.publishUi();
+    }
+
+    // Auto-wave countdown ticks independently of waveInProgress.
+    if (this.autoWaveCountdown !== null) {
+      this.autoWaveCountdown -= dt;
+      if (this.autoWaveCountdown <= 0) {
+        this.autoWaveCountdown = null;
+        this.startNextWave();
+      } else {
+        this.publishUi();
+      }
     }
   }
 
   /** Resolves a projectile reaching its destination. */
   private impact(p: Projectile): void {
     const s = p.stats;
-    const splash = s.splashRadius ?? 0;
+    const baseSplash = s.splashRadius ?? 0;
+    const splash =
+      this.activeSynergies.has('howlingDiamond') && p.towerType === 'howlCannon'
+        ? baseSplash * 1.3
+        : baseSplash;
 
     if (splash > 0) {
       // Area damage cannot be dodged.
@@ -321,6 +380,16 @@ export class GameEngine {
 
   /** Applies damage and on-hit effects (burn/slow) to an enemy. */
   private damage(e: Enemy, amount: number, p: Projectile): void {
+    // Bull Run: global ×1.5 damage buff during the 10-second window.
+    if (this.packBullRun) amount *= 1.5;
+    // Burn Protocol synergy: blueFlame deals +25% against slowed enemies.
+    if (
+      this.activeSynergies.has('burnProtocol') &&
+      p.towerType === 'blueFlame' &&
+      e.slowFactor < 1
+    ) {
+      amount *= 1.25;
+    }
     // Whale armor: flat reduction per projectile hit (min 1 dealt). Burn
     // ticks bypass armor entirely — they happen inside Enemy.update.
     const armor = e.def.armor ?? 0;
@@ -351,6 +420,18 @@ export class GameEngine {
     this.stats.pawsEarned += reward;
     this.tracker.onKill(e.def.id, e.def.boss);
     this.tracker.onPawsChanged(this.paws);
+    // Pack Energy: bosses give +30, normal enemies +8–15 based on reward tier.
+    if (!this.packBullRun) {
+      const gain = e.def.boss ? 30 : Math.min(15, Math.max(8, Math.round(e.def.reward * 0.6)));
+      this.packEnergy = Math.min(100, this.packEnergy + gain);
+      if (this.packEnergy >= 100) {
+        this.packBullRun = true;
+        this.packBullRunTimer = 10;
+        this.packEnergy = 100;
+        this.emit({ kind: 'toast', text: '⚡ BULL RUN! All towers deal ×1.5 damage for 10s!', tone: 'success' });
+        this.publishUi();
+      }
+    }
     this.particles.push(text(e.x, e.y, `+${reward}🐾`, '#facc15'));
     // Death burst: ring(s) + sparks in enemy's colour.
     this.particles.push(ring(e.x, e.y, e.def.radius + 10, e.def.color));
@@ -381,6 +462,27 @@ export class GameEngine {
     if (this.selectedTowerId === null) this.uiTimer = 1; // refresh paws promptly
   }
 
+  private recomputeSynergies(): void {
+    const towerTypes = new Set(this.towers.map((t) => t.type));
+    this.activeSynergies.clear();
+    for (const s of SYNERGIES) {
+      if (s.requires.every((r) => towerTypes.has(r))) {
+        this.activeSynergies.add(s.id);
+      }
+    }
+  }
+
+  private buildWavePreview(wave: number): Array<{ type: import('../types').EnemyTypeId; count: number }> {
+    const entries = buildWave(wave, this.countMult);
+    const counts: Partial<Record<string, number>> = {};
+    const order: import('../types').EnemyTypeId[] = [];
+    for (const e of entries) {
+      if (!(e.type in counts)) order.push(e.type);
+      counts[e.type] = (counts[e.type] ?? 0) + 1;
+    }
+    return order.map((t) => ({ type: t, count: counts[t]! }));
+  }
+
   private endGame(status: 'gameover' | 'victory'): void {
     this.status = status;
     this.waveInProgress = false;
@@ -405,6 +507,7 @@ export class GameEngine {
     this.spawnQueue = buildWave(this.wave, this.countMult);
     this.waveClock = 0;
     this.waveInProgress = true;
+    this.nextWavePreview = null;
     const boss = isBossWave(this.wave);
     this.sound.play(boss ? 'boss' : 'wave');
     this.emit({
@@ -492,6 +595,7 @@ export class GameEngine {
     this.towers.push(new Tower(type, col, row));
     this.stats.towersBuilt += 1;
     this.tracker.onTowersChanged(this.towers);
+    this.recomputeSynergies();
     this.sound.play('place');
     this.publishUi();
     return true;
@@ -549,6 +653,7 @@ export class GameEngine {
     this.paws += this.towers[idx].sellValue;
     this.towers.splice(idx, 1);
     this.selectedTowerId = null;
+    this.recomputeSynergies();
     this.sound.play('sell');
     this.publishUi();
   }
@@ -559,6 +664,12 @@ export class GameEngine {
       this.status = 'playing';
       this.lastTs = performance.now();
     }
+    this.publishUi();
+  }
+
+  toggleAutoWave(): void {
+    this.autoWave = !this.autoWave;
+    if (!this.autoWave) this.autoWaveCountdown = null;
     this.publishUi();
   }
 
@@ -593,10 +704,17 @@ export class GameEngine {
       waveInProgress: this.waveInProgress,
       nextWaveIsBoss: isBossWave(this.wave + 1),
       endless: this.endless,
+      autoWave: this.autoWave,
+      autoWaveCountdown: this.autoWaveCountdown !== null ? Math.ceil(this.autoWaveCountdown) : null,
       selectedTowerType: this.selectedTowerType,
       selectedTower: sel ? sel.snapshot() : null,
       timeScale: this.timeScale,
       soundOn: this.sound.on,
+      activeSynergies: Array.from(this.activeSynergies),
+      packEnergy: this.packEnergy,
+      packBullRun: this.packBullRun,
+      packBullRunTimer: this.packBullRunTimer,
+      nextWavePreview: this.nextWavePreview,
     });
   }
 }

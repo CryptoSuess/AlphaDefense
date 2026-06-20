@@ -1,4 +1,5 @@
 import { CANVAS_H, CANVAS_W, GRID_COLS, GRID_ROWS, TILE, type GameMap } from '../data/map';
+import { SYNERGY_BY_ID, SYNERGY_BY_TOWER } from '../data/synergies';
 import { TOWERS } from '../data/towers';
 import type { GameEngine } from './Engine';
 import type { Enemy } from './Enemy';
@@ -56,7 +57,7 @@ export function render(ctx: CanvasRenderingContext2D, g: GameEngine): void {
   drawBoard(ctx, g.map, g.now);
   drawPlacementOverlay(ctx, g);
   drawVault(ctx, g);
-  for (const t of g.towers) drawTower(ctx, t, t.id === g.selectedTowerId, g.now);
+  for (const t of g.towers) drawTower(ctx, t, t.id === g.selectedTowerId, g.now, g.packBullRun, g.activeSynergies);
   for (const e of g.enemies) drawEnemy(ctx, e, g.now);
   for (const p of g.projectiles) {
     const isSplash = !!p.stats.splashRadius;
@@ -339,6 +340,8 @@ function drawTower(
   t: Tower,
   selected: boolean,
   now: number,
+  bullRun: boolean,
+  activeSynergies: Set<string>,
 ): void {
   const sprite = getSprite(t.def.spriteKey);
   // Recoil: 1 right after a shot, easing back to 0 over ~0.15s.
@@ -386,6 +389,38 @@ function drawTower(
     ctx.beginPath();
     ctx.arc(fx, fy, 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  }
+
+  // Bull Run: pulsing gold outer ring on every tower during the buff.
+  if (bullRun) {
+    const bullPulse = 0.5 + 0.5 * Math.sin(now * 8 + t.id * 0.5);
+    ctx.save();
+    ctx.strokeStyle = `rgba(250,204,21,${0.55 + 0.3 * bullPulse})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur = 12 + bullPulse * 8;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, 28, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Synergy rings: thin colored pulsing ring per active synergy this tower is part of.
+  const towerSynergies = SYNERGY_BY_TOWER[t.type] ?? [];
+  for (const sid of towerSynergies) {
+    if (!activeSynergies.has(sid)) continue;
+    const def = SYNERGY_BY_ID[sid];
+    const synPulse = 0.4 + 0.6 * Math.abs(Math.sin(now * 3.5 + t.id * 1.2));
+    ctx.save();
+    ctx.strokeStyle = def.color;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = synPulse;
+    ctx.shadowColor = def.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, 32, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 
