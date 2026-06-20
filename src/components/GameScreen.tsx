@@ -2,14 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CANVAS_H, CANVAS_W, TILE } from '../data/map';
 import type { DifficultyId, GameEvent, MapId, RunStats, TowerTypeId, WeeklyChallenge } from '../types';
 import { globalLeaderboardEnabled, leaderboard } from '../utils/integrations';
-import { getPlayerName } from '../utils/storage';
+import { getPlayerName, loadTutorialSeen, markTutorialSeen } from '../utils/storage';
 import { getAddress, shortAddress } from '../utils/wallet';
 import { useGameEngine } from '../hooks/useGameEngine';
 import { EndScreen } from './EndScreen';
 import { Hud } from './Hud';
+import { Settings } from './Settings';
 import { TowerBar } from './TowerBar';
 import { TowerPanel } from './TowerPanel';
 import { Toasts, type ToastItem } from './Toasts';
+import { Tutorial } from './Tutorial';
 import { WaveIntel } from './WaveIntel';
 
 interface Props {
@@ -43,6 +45,8 @@ export function GameScreen({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => !loadTutorialSeen());
   const [ended, setEnded] = useState<{
     status: 'gameover' | 'victory';
     score: number;
@@ -165,6 +169,8 @@ export function GameScreen({
           onSound={() => engine.toggleSound()}
           onStartWave={() => engine.startNextWave()}
           onAutoWave={() => engine.toggleAutoWave()}
+          onSettings={() => setShowSettings(true)}
+          onHelp={() => setShowTutorial(true)}
           onQuit={onQuit}
         />
       </div>
@@ -214,6 +220,22 @@ export function GameScreen({
                   }
                 : undefined
             }
+          />
+        )}
+        {showTutorial && (
+          <Tutorial
+            onClose={() => {
+              markTutorialSeen();
+              setShowTutorial(false);
+            }}
+          />
+        )}
+        {showSettings && (
+          <Settings
+            onMasterVolume={(v) => engine.sound.setMasterVolume(v)}
+            onMusicVolume={(v) => engine.sound.setMusicVolume(v)}
+            onScreenShake={(on) => engine.setScreenShake(on)}
+            onClose={() => setShowSettings(false)}
           />
         )}
       </div>

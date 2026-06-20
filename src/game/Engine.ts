@@ -23,6 +23,7 @@ import type {
   WeeklyChallenge,
 } from '../types';
 import { dist } from '../utils/math';
+import { loadSettings } from '../utils/storage';
 import { AchievementTracker } from './achievements';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
@@ -59,6 +60,8 @@ export class GameEngine {
   private autoWaveCountdown: number | null = null;
   /** Screen-shake intensity in px, decays each frame. */
   shake = 0;
+  /** When false, heavy hits never trigger screen shake (motion sensitivity). */
+  private shakeEnabled = loadSettings().screenShake;
   /** Game time of the last Vault hit (renderer flashes the vault briefly). */
   lastVaultHit = -10;
   readonly map: GameMap;
@@ -137,6 +140,7 @@ export class GameEngine {
     this.rewardMult = diff.rewardMult * reward;
     this.speedMult = speed;
     this.countMult = count;
+    this.sound.setTheme(mapId);
   }
 
   // ---------------------------------------------------------------------------
@@ -228,7 +232,7 @@ export class GameEngine {
         this.lives -= e.def.livesCost;
         this.stats.leaks += 1;
         this.lastVaultHit = this.now;
-        this.shake = Math.min(this.shake + (e.def.boss ? 14 : 6), 18);
+        if (this.shakeEnabled) this.shake = Math.min(this.shake + (e.def.boss ? 14 : 6), 18);
         this.sound.play('leak');
         this.emit({ kind: 'toast', text: COPY.vaultHit, tone: 'danger' });
         if (this.lives <= 0) {
@@ -445,7 +449,7 @@ export class GameEngine {
     }
     this.sound.play('kill');
     if (e.def.boss) {
-      this.shake = Math.min(this.shake + 10, 18);
+      if (this.shakeEnabled) this.shake = Math.min(this.shake + 10, 18);
       const line = e.def.id === 'rugLord' ? COPY.rugLordDown : COPY.bossDown;
       this.emit({ kind: 'toast', text: line, tone: 'success' });
     }
@@ -681,6 +685,12 @@ export class GameEngine {
   toggleSound(): void {
     this.sound.toggle();
     this.publishUi();
+  }
+
+  /** Enables/disables screen shake (settings panel). */
+  setScreenShake(on: boolean): void {
+    this.shakeEnabled = on;
+    if (!on) this.shake = 0;
   }
 
   // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
-import { loadSoundOn, saveSoundOn } from '../utils/storage';
+import type { MapId } from '../types';
+import { loadSettings, loadSoundOn, saveSoundOn } from '../utils/storage';
 
 /**
  * Sound manager — fully synthesized with the Web Audio API, no audio assets.
@@ -35,11 +36,44 @@ const THROTTLE: Partial<Record<SoundId, number>> = {
   leak: 0.25,
 };
 
-const MASTER_VOL = 0.5;
-const MUSIC_VOL = 0.05;
+/**
+ * Music gets a steep extra attenuation so it sits well under the SFX even at
+ * full slider. A music slider of 0.5 reproduces the old fixed 0.05 gain.
+ */
+const MUSIC_SCALE = 0.1;
+
+/** A per-map ambient bed: bass walk, tempo and the airy harmonic above it. */
+interface MusicTheme {
+  /** Bass notes in Hz, one per beat, looped. */
+  bass: number[];
+  /** Tempo in beats per minute. */
+  bpm: number;
+  /** Harmonic multiple of the bass note for the sparse pad on bar starts. */
+  fifthMult: number;
+  /** Oscillator shape of that pad — sets the room's character. */
+  fifthType: OscillatorType;
+}
+
+/**
+ * Each battlefield gets its own mood. vaultRun keeps the original A-minor
+ * walk; the others shift key, tempo and timbre so the maps feel distinct.
+ */
+const MUSIC_THEMES: Record<MapId, MusicTheme> = {
+  // Original: brooding A-minor amble.
+  vaultRun: { bass: [55, 65.41, 82.41, 49], bpm: 64, fifthMult: 3, fifthType: 'sine' },
+  // The Gauntlet: faster, driving low G — a forced march.
+  gauntlet: { bass: [49, 49, 58.27, 65.41], bpm: 74, fifthMult: 4, fifthType: 'triangle' },
+  // FUD Spiral: slow, tense, coiling B-ish line with a close, dark pad.
+  fudSpiral: { bass: [61.74, 73.42, 65.41, 82.41], bpm: 56, fifthMult: 2.5, fifthType: 'sine' },
+  // The Double Cross: restless, brisk F with a buzzing saw pad.
+  doubleCross: { bass: [43.65, 65.41, 51.91, 77.78], bpm: 82, fifthMult: 3, fifthType: 'sawtooth' },
+};
 
 export class SoundManager {
   private enabled: boolean = loadSoundOn();
+  private masterVolume: number;
+  private musicVolume: number;
+  private theme: MusicTheme = MUSIC_THEMES.vaultRun;
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private musicGain: GainNode | null = null;
@@ -48,8 +82,40 @@ export class SoundManager {
   private noteIndex = 0;
   private lastPlayed = new Map<SoundId, number>();
 
+  constructor() {
+    const s = loadSettings();
+    this.masterVolume = s.masterVolume;
+    this.musicVolume = s.musicVolume;
+  }
+
   get on(): boolean {
     return this.enabled;
+  }
+
+  /** Current user-scale volumes (0–1), for initialising UI controls. */
+  get masterVol(): number {
+    return this.masterVolume;
+  }
+
+  get musicVol(): number {
+    return this.musicVolume;
+  }
+
+  /** Selects the ambient theme for a map. Safe to call before/while playing. */
+  setTheme(mapId: MapId): void {
+    this.theme = MUSIC_THEMES[mapId] ?? MUSIC_THEMES.vaultRun;
+  }
+
+  /** Live master-volume change (0–1). Persistence is the caller's job. */
+  setMasterVolume(v: number): void {
+    this.masterVolume = Math.min(1, Math.max(0, v));
+    if (this.master) this.master.gain.value = this.masterVolume;
+  }
+
+  /** Live music-volume change (0–1). */
+  setMusicVolume(v: number): void {
+    this.musicVolume = Math.min(1, Math.max(0, v));
+    if (this.musicGain) this.musicGain.gain.value = this.musicVolume * MUSIC_SCALE;
   }
 
   toggle(): boolean {
@@ -109,10 +175,10 @@ export class SoundManager {
       try {
         this.ctx = new AudioContext();
         this.master = this.ctx.createGain();
-        this.master.gain.value = MASTER_VOL;
+        this.master.gain.value = this.masterVolume;
         this.master.connect(this.ctx.destination);
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = MUSIC_VOL;
+        this.musicGain.gain.value = this.musicVolume * MUSIC_SCALE;
         this.musicGain.connect(this.master);
       } catch {
         return null;
@@ -235,20 +301,19 @@ export class SoundManager {
   }
 
   // -------------------------------------------------------------------------
-  // Ambient music loop: a slow minor-key bass walk with an airy fifth above,
-  // quiet enough to sit under the SFX.
+  // Ambient music loop: a slow bass walk with an airy harmonic above, quiet
+  // enough to sit under the SFX. The pattern, tempo and timbre come from the
+  // active map theme (see MUSIC_THEMES).
   // -------------------------------------------------------------------------
-
-  /** Bass pattern in Hz (A1, C2, E2, G1), one note per beat at ~64 BPM. */
-  private static readonly BASS = [55, 65.41, 82.41, 49];
 
   private scheduleMusic(): void {
     const ctx = this.ctx;
     if (!ctx || !this.musicGain) return;
-    const beat = 60 / 64;
+    const theme = this.theme;
+    const beat = 60 / theme.bpm;
     while (this.nextNoteTime < ctx.currentTime + 0.4) {
-      const idx = this.noteIndex % SoundManager.BASS.length;
-      const freq = SoundManager.BASS[idx];
+      const idx = this.noteIndex % theme.bass.length;
+      const freq = theme.bass[idx];
       this.tone(ctx, {
         at: this.nextNoteTime,
         freq,
@@ -258,12 +323,12 @@ export class SoundManager {
         attack: 0.05,
         dest: this.musicGain,
       });
-      // Sparse airy fifth on the first beat of each bar.
+      // Sparse airy pad on the first beat of each bar.
       if (idx === 0) {
         this.tone(ctx, {
           at: this.nextNoteTime,
-          freq: freq * 3,
-          type: 'sine',
+          freq: freq * theme.fifthMult,
+          type: theme.fifthType,
           dur: beat * 3.5,
           vol: 0.18,
           attack: 0.4,
