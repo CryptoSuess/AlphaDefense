@@ -7,6 +7,7 @@ import { GRID_COLS, GRID_ROWS, MAPS, MAP_ORDER } from '../data/map';
 import { getWeeklyChallenge } from '../data/weekly';
 import type { DifficultyId, MapId } from '../types';
 import {
+  loadLifetimeStats,
   loadUnlockedAchievements,
   scoreKey,
   weeklyScoreKey,
@@ -158,6 +159,7 @@ export function StartScreen({ highScores, onStart, onStartWeekly }: Props) {
       {globalLeaderboardEnabled && <GlobalTopPanel boardKey={weeklyScoreKey(weekly.weekKey)} />}
 
       <AchievementsPanel />
+      <CareerPanel />
 
       {/* How to play */}
       <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
@@ -224,36 +226,92 @@ function GlobalTopPanel({ boardKey }: { boardKey: string }) {
   );
 }
 
-/** Grid of all achievements; locked ones render dimmed. */
+/** Grid of all achievements with progress bars for countable ones. */
 function AchievementsPanel() {
   const unlocked = loadUnlockedAchievements();
+  const lifetime = loadLifetimeStats();
+
+  const PROGRESS: Partial<Record<string, { current: number; total: number }>> = {
+    packHunter: { current: lifetime.totalKills, total: 100 },
+    jeetExterminator: { current: lifetime.kills.jeet ?? 0, total: 1000 },
+    whaleWatcher: { current: lifetime.kills.whale ?? 0, total: 25 },
+    deepTrenches: { current: lifetime.bestWave, total: 30 },
+  };
+
   return (
     <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
-      <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-niko-glow">
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-niko-glow">
         Achievements ({unlocked.size}/{ACHIEVEMENTS.length})
       </h2>
-      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {ACHIEVEMENTS.map((a) => {
           const got = unlocked.has(a.id);
+          const prog = !got ? PROGRESS[a.id] : undefined;
+          const pct = prog ? Math.min(100, Math.round((prog.current / prog.total) * 100)) : 0;
           return (
             <div
               key={a.id}
-              title={a.description}
-              className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${
-                got ? 'bg-niko-panel text-niko-ice' : 'bg-niko-navy/60 text-slate-600'
+              className={`rounded-lg px-2 py-2 text-xs ${
+                got ? 'bg-niko-panel text-niko-ice' : 'bg-niko-navy/60 text-slate-500'
               }`}
             >
-              <span className={got ? '' : 'grayscale opacity-50'} aria-hidden>
-                {a.icon}
-              </span>
-              <span className="font-bold">{a.name}</span>
-              <span className="ml-auto hidden truncate text-[10px] text-slate-500 sm:inline">
-                {a.description}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={got ? '' : 'grayscale opacity-40'} aria-hidden>
+                  {a.icon}
+                </span>
+                <span className="font-bold">{a.name}</span>
+                {got && <span className="ml-auto text-green-400 text-[10px]">✓</span>}
+                {prog && (
+                  <span className="ml-auto tabular-nums text-[10px] text-slate-400">
+                    {prog.current.toLocaleString()}/{prog.total.toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-[10px] text-slate-500">{a.description}</p>
+              {prog && (
+                <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-niko-deep">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Career stats panel — only shown after the first run. */
+function CareerPanel() {
+  const lifetime = loadLifetimeStats();
+  if (lifetime.runs === 0) return null;
+  const totalVictories = Object.values(lifetime.victories).reduce((s, v) => s + (v ?? 0), 0);
+  return (
+    <div className="w-full max-w-xl rounded-xl border border-niko-line bg-niko-navy/60 p-4">
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-niko-glow">
+        🐾 Pack Career
+      </h2>
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        <CareerStat icon="🏃" label="Runs" value={lifetime.runs} />
+        <CareerStat icon="⚔️" label="Kills" value={lifetime.totalKills} />
+        <CareerStat icon="💀" label="Bosses" value={lifetime.bossesSlain} />
+        <CareerStat icon="🌊" label="Best Wave" value={lifetime.bestWave} />
+        <CareerStat icon="🏆" label="Wins" value={totalVictories} />
+        <CareerStat icon="👑" label="Alpha Wins" value={lifetime.victories.alpha ?? 0} />
+      </div>
+    </div>
+  );
+}
+
+function CareerStat({ icon, label, value }: { icon: string; label: string; value: number }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 text-center">
+      <span className="text-lg" aria-hidden>{icon}</span>
+      <span className="text-sm font-bold tabular-nums text-niko-ice">{value.toLocaleString()}</span>
+      <span className="text-[10px] uppercase tracking-wide text-slate-500">{label}</span>
     </div>
   );
 }
