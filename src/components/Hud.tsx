@@ -9,11 +9,23 @@ interface Props {
   onSound: () => void;
   onStartWave: () => void;
   onAutoWave: () => void;
+  onSettings: () => void;
+  onHelp: () => void;
   onQuit: () => void;
 }
 
 /** Top bar: lives, paws, score, wave counter and game controls. */
-export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onAutoWave, onQuit }: Props) {
+export function Hud({
+  ui,
+  onPause,
+  onSpeed,
+  onSound,
+  onStartWave,
+  onAutoWave,
+  onSettings,
+  onHelp,
+  onQuit,
+}: Props) {
   return (
     <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-niko-line bg-niko-panel/80 px-3 py-2 text-sm">
       <Stat icon="❤️" label="Vault" value={`${ui.lives}/${ui.maxLives}`} warn={ui.lives <= 5} />
@@ -60,6 +72,8 @@ export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onAutoWave, on
           label={ui.soundOn ? '🔊' : '🔇'}
           title="Toggle sound & music"
         />
+        <IconButton onClick={onSettings} label="⚙" title="Settings" />
+        <IconButton onClick={onHelp} label="❓" title="How to play" />
         <IconButton
           onClick={onPause}
           label={ui.status === 'paused' ? '▶' : '⏸'}

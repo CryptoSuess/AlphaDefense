@@ -139,3 +139,70 @@ export function saveSoundOn(on: boolean): void {
     /* ignore */
   }
 }
+
+// ---------------------------------------------------------------------------
+// Gameplay settings (volumes, accessibility)
+// ---------------------------------------------------------------------------
+
+const SETTINGS_KEY = 'niko-td:settings';
+const TUTORIAL_KEY = 'niko-td:tutorial-seen';
+
+/** Player-adjustable settings. Volumes are 0–1 user scale. */
+export interface GameSettings {
+  /** Overall SFX/master loudness (0 = silent, 1 = full). */
+  masterVolume: number;
+  /** Ambient music loudness relative to master (0–1). */
+  musicVolume: number;
+  /** Whether the canvas shakes on heavy hits (off for motion sensitivity). */
+  screenShake: boolean;
+}
+
+export const DEFAULT_SETTINGS: GameSettings = {
+  masterVolume: 0.5,
+  musicVolume: 0.5,
+  screenShake: true,
+};
+
+const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
+
+export function loadSettings(): GameSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<GameSettings>;
+      return {
+        masterVolume: clamp01(parsed.masterVolume ?? DEFAULT_SETTINGS.masterVolume),
+        musicVolume: clamp01(parsed.musicVolume ?? DEFAULT_SETTINGS.musicVolume),
+        screenShake: parsed.screenShake ?? DEFAULT_SETTINGS.screenShake,
+      };
+    }
+  } catch {
+    /* fall through */
+  }
+  return { ...DEFAULT_SETTINGS };
+}
+
+export function saveSettings(settings: GameSettings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** True once the player has dismissed the first-run tutorial. */
+export function loadTutorialSeen(): boolean {
+  try {
+    return localStorage.getItem(TUTORIAL_KEY) === '1';
+  } catch {
+    return true; // storage unavailable — don't nag every load
+  }
+}
+
+export function markTutorialSeen(): void {
+  try {
+    localStorage.setItem(TUTORIAL_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
