@@ -175,6 +175,10 @@ export interface UiState {
   nextWaveIsBoss: boolean;
   /** True once the player chose to keep going after the wave-25 victory. */
   endless: boolean;
+  /** When true the next wave starts automatically after a short countdown. */
+  autoWave: boolean;
+  /** Seconds until the next wave auto-starts (null when not counting down). */
+  autoWaveCountdown: number | null;
   selectedTowerType: TowerTypeId | null;
   selectedTower: TowerSnapshot | null;
   timeScale: number;

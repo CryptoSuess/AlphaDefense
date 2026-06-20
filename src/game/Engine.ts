@@ -52,6 +52,10 @@ export class GameEngine {
   timeScale = 1;
   /** True after the player chose to keep playing past the wave-25 victory. */
   endless = false;
+  /** When true the next wave launches automatically after a short cooldown. */
+  autoWave = false;
+  /** Seconds remaining in the auto-wave countdown (null = not counting). */
+  private autoWaveCountdown: number | null = null;
   /** Screen-shake intensity in px, decays each frame. */
   shake = 0;
   /** Game time of the last Vault hit (renderer flashes the vault briefly). */
@@ -288,7 +292,22 @@ export class GameEngine {
         text: `${COPY.waveCleared(this.wave)} (+${bonus} 🐾${yieldNote})`,
         tone: 'success',
       });
+      // Arm the auto-wave countdown if the feature is on and the run continues.
+      if (this.autoWave && (this.endless || this.wave < TOTAL_WAVES)) {
+        this.autoWaveCountdown = 2;
+      }
       this.publishUi();
+    }
+
+    // Auto-wave countdown ticks independently of waveInProgress.
+    if (this.autoWaveCountdown !== null) {
+      this.autoWaveCountdown -= dt;
+      if (this.autoWaveCountdown <= 0) {
+        this.autoWaveCountdown = null;
+        this.startNextWave();
+      } else {
+        this.publishUi();
+      }
     }
   }
 
@@ -562,6 +581,12 @@ export class GameEngine {
     this.publishUi();
   }
 
+  toggleAutoWave(): void {
+    this.autoWave = !this.autoWave;
+    if (!this.autoWave) this.autoWaveCountdown = null;
+    this.publishUi();
+  }
+
   toggleSpeed(): void {
     this.timeScale = this.timeScale === 1 ? 2 : 1;
     this.publishUi();
@@ -593,6 +618,8 @@ export class GameEngine {
       waveInProgress: this.waveInProgress,
       nextWaveIsBoss: isBossWave(this.wave + 1),
       endless: this.endless,
+      autoWave: this.autoWave,
+      autoWaveCountdown: this.autoWaveCountdown !== null ? Math.ceil(this.autoWaveCountdown) : null,
       selectedTowerType: this.selectedTowerType,
       selectedTower: sel ? sel.snapshot() : null,
       timeScale: this.timeScale,

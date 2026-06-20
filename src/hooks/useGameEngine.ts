@@ -34,6 +34,8 @@ export function useGameEngine(
     waveInProgress: false,
     nextWaveIsBoss: false,
     endless: false,
+    autoWave: false,
+    autoWaveCountdown: null,
     selectedTowerType: null,
     selectedTower: null,
     timeScale: 1,

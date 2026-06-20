@@ -163,6 +163,7 @@ export function GameScreen({
           onSpeed={() => engine.toggleSpeed()}
           onSound={() => engine.toggleSound()}
           onStartWave={() => engine.startNextWave()}
+          onAutoWave={() => engine.toggleAutoWave()}
           onQuit={onQuit}
         />
       </div>
