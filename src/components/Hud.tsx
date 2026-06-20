@@ -1,4 +1,5 @@
 import { COPY } from '../data/copy';
+import { SYNERGY_BY_ID } from '../data/synergies';
 import type { UiState } from '../types';
 
 interface Props {
@@ -23,6 +24,8 @@ export function Hud({ ui, onPause, onSpeed, onSound, onStartWave, onAutoWave, on
         label="Wave"
         value={ui.endless ? `${ui.wave} ∞` : `${ui.wave}/${ui.totalWaves}`}
       />
+      <PackGauge energy={ui.packEnergy} bullRun={ui.packBullRun} timer={ui.packBullRunTimer} />
+      <SynergyPills ids={ui.activeSynergies} />
 
       <div className="ml-auto flex items-center gap-2">
         {/* Manual start-wave button — hidden while auto-wave is counting down */}
@@ -117,5 +120,59 @@ function IconButton({
     >
       {label}
     </button>
+  );
+}
+
+function PackGauge({
+  energy,
+  bullRun,
+  timer,
+}: {
+  energy: number;
+  bullRun: boolean;
+  timer: number;
+}) {
+  const pct = Math.round(Math.min(100, energy));
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-niko-navy px-2 py-1">
+      <span className="hidden text-xs text-slate-400 sm:inline">⚡ Pack</span>
+      <div className="relative h-2.5 w-20 overflow-hidden rounded-full bg-niko-deep">
+        <div
+          className={`h-full rounded-full transition-all duration-100 ${
+            bullRun ? 'animate-pulse bg-yellow-400' : 'bg-blue-500'
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {bullRun ? (
+        <span className="text-xs font-bold tabular-nums text-yellow-400">
+          {Math.ceil(timer)}s
+        </span>
+      ) : (
+        <span className="text-xs font-bold tabular-nums text-niko-ice">{pct}%</span>
+      )}
+    </div>
+  );
+}
+
+function SynergyPills({ ids }: { ids: string[] }) {
+  if (ids.length === 0) return null;
+  return (
+    <div className="flex gap-1.5">
+      {ids.map((id) => {
+        const def = SYNERGY_BY_ID[id];
+        if (!def) return null;
+        return (
+          <span
+            key={id}
+            className="rounded-full px-2 py-0.5 text-xs font-bold text-black"
+            style={{ backgroundColor: def.color }}
+            title={def.label}
+          >
+            {def.label}
+          </span>
+        );
+      })}
+    </div>
   );
 }

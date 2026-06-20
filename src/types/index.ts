@@ -183,6 +183,24 @@ export interface UiState {
   selectedTower: TowerSnapshot | null;
   timeScale: number;
   soundOn: boolean;
+  /** Synergy ids currently active (both required tower types present on map). */
+  activeSynergies: string[];
+  /** Pack Energy gauge 0–100. Fills with kills; triggers Bull Run at 100. */
+  packEnergy: number;
+  /** True during the 10-second Bull Run damage buff (all towers ×1.5). */
+  packBullRun: boolean;
+  /** Seconds remaining on the active Bull Run (0 when inactive). */
+  packBullRunTimer: number;
+  /** Enemy composition of the next wave; null while a wave is in progress. */
+  nextWavePreview: Array<{ type: EnemyTypeId; count: number }> | null;
+}
+
+/** A tower-synergy pair definition (see src/data/synergies.ts). */
+export interface SynergyDef {
+  id: string;
+  label: string;
+  color: string;
+  requires: [TowerTypeId, TowerTypeId];
 }
 
 /** Events the engine pushes to the UI (toasts, sounds, end states). */

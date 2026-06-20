@@ -40,6 +40,11 @@ export function useGameEngine(
     selectedTower: null,
     timeScale: 1,
     soundOn: engine.sound.on,
+    activeSynergies: [],
+    packEnergy: 0,
+    packBullRun: false,
+    packBullRunTimer: 0,
+    nextWavePreview: null,
   });
 
   // Keep the latest onEvent without re-attaching the engine.

@@ -10,6 +10,7 @@ import { Hud } from './Hud';
 import { TowerBar } from './TowerBar';
 import { TowerPanel } from './TowerPanel';
 import { Toasts, type ToastItem } from './Toasts';
+import { WaveIntel } from './WaveIntel';
 
 interface Props {
   difficulty: DifficultyId;
@@ -216,6 +217,12 @@ export function GameScreen({
           />
         )}
       </div>
+
+      <WaveIntel
+        preview={ui.nextWavePreview}
+        autoWaveCountdown={ui.autoWaveCountdown}
+        waveNumber={ui.wave + 1}
+      />
 
       <div className="w-full max-w-5xl">
         {ui.selectedTower ? (
