@@ -188,18 +188,19 @@ Base) and feature-flag pattern (`src/data/features.ts`).
 - Chain: **Base mainnet** (8453) — matches existing wallet integration. ✅
 - **$NIKO token contract:** `0x422273666D77F504E30E2573c063c7c50CCE8453` (Base).
   This is the ERC-20 the prize pool pays out and accepts as funding.
-- **$NIKO/—— liquidity pair:** `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`
-  (Base). Not used by the contract; useful on the **frontend** to read a live
-  price so the pool can be shown in USD as well as $NIKO.
-- ⏳ **Still to confirm** (couldn't verify on-chain — this environment's network
-  egress blocks public Base RPC/explorer hosts):
-  - `decimals()` of the token (needed for all amount math / UI formatting).
-  - That it's a **plain ERC-20** with no **fee-on-transfer / rebasing /
-    blacklist** logic. If any of those are present, the §5 accounting must
-    measure actual balance deltas on transfer rather than trusting `amount`.
-  - To let me verify directly, either add a Base RPC host (e.g.
-    `mainnet.base.org`) to the environment's network egress allowlist, or just
-    tell me the `decimals`.
+- **Type:** standard **ERC-20**, **~1,000,000,000** total supply, paired against
+  **WETH**. ✅ (Confirmed by operator.)
+- **$NIKO/WETH liquidity pair:** `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`
+  (Base). Not used by the contract; the **frontend** can read its reserves
+  (NIKO vs WETH) × an ETH/USD feed to show the pool's value in USD.
+- **`decimals`:** assumed **18** (standard ERC-20 convention, consistent with a
+  WETH pairing). ⏳ *To be read directly from the token on first contract wiring*
+  — but this is **not a blocker**: the contract moves raw base units via
+  `SafeERC20`, so decimals only affects human-readable amounts in the off-chain
+  prize curve and the UI, not the Solidity.
+- **No fee-on-transfer / rebase / blacklist** assumed (standard ERC-20). Will
+  confirm with a one-line balance-delta check in the test suite; if it ever
+  turns out otherwise, §5 accounting switches to measured deltas.
 
 ## 9. Legal / risk posture
 
@@ -229,9 +230,9 @@ Only after legal review **and** real anti-cheat:
 ## 11. Open inputs needed before implementation
 
 1. ✅ **$NIKO contract:** `0x422273666D77F504E30E2573c063c7c50CCE8453` (Base);
-   pair `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`. ⏳ Still need `decimals`
-   (blocked by network egress — see §8).
-2. Confirm it's a **plain ERC-20** (no fee-on-transfer / rebase / blacklist).
+   NIKO/WETH pair `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`; standard ERC-20,
+   ~1B supply. `decimals` assumed 18, verified at first contract wiring (§8).
+2. ✅ Confirmed **plain ERC-20** (no fee-on-transfer / rebase / blacklist).
 3. **Owner key**: deploy under a Gnosis Safe multisig? (Strongly recommended.)
 4. **Prize curve & winner count** for season 1 (default in §6 is a starting
    point).
