@@ -183,14 +183,23 @@ Base) and feature-flag pattern (`src/data/features.ts`).
   Recommendation: introduce `viem` here — reads/writes get materially harder to
   hand-roll than the single `personal_sign` we have now.
 
-## 8. Token specifics (to confirm)
+## 8. Token specifics
 
 - Chain: **Base mainnet** (8453) — matches existing wallet integration. ✅
-- Token: **$NIKO ERC-20 on Base** — **need the contract address + `decimals`**
-  to wire deploy config and amount math. (Open input — see §11.)
-- Standard ERC-20 assumed. ⚠️ If the token has **transfer fee / rebasing /
-  blacklist** mechanics, the accounting in §5 needs adjustment (measure balance
-  deltas instead of trusting `amount`). Must confirm before implementation.
+- **$NIKO token contract:** `0x422273666D77F504E30E2573c063c7c50CCE8453` (Base).
+  This is the ERC-20 the prize pool pays out and accepts as funding.
+- **$NIKO/—— liquidity pair:** `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`
+  (Base). Not used by the contract; useful on the **frontend** to read a live
+  price so the pool can be shown in USD as well as $NIKO.
+- ⏳ **Still to confirm** (couldn't verify on-chain — this environment's network
+  egress blocks public Base RPC/explorer hosts):
+  - `decimals()` of the token (needed for all amount math / UI formatting).
+  - That it's a **plain ERC-20** with no **fee-on-transfer / rebasing /
+    blacklist** logic. If any of those are present, the §5 accounting must
+    measure actual balance deltas on transfer rather than trusting `amount`.
+  - To let me verify directly, either add a Base RPC host (e.g.
+    `mainnet.base.org`) to the environment's network egress allowlist, or just
+    tell me the `decimals`.
 
 ## 9. Legal / risk posture
 
@@ -219,7 +228,9 @@ Only after legal review **and** real anti-cheat:
 
 ## 11. Open inputs needed before implementation
 
-1. **$NIKO contract address on Base** and its `decimals`.
+1. ✅ **$NIKO contract:** `0x422273666D77F504E30E2573c063c7c50CCE8453` (Base);
+   pair `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`. ⏳ Still need `decimals`
+   (blocked by network egress — see §8).
 2. Confirm it's a **plain ERC-20** (no fee-on-transfer / rebase / blacklist).
 3. **Owner key**: deploy under a Gnosis Safe multisig? (Strongly recommended.)
 4. **Prize curve & winner count** for season 1 (default in §6 is a starting
