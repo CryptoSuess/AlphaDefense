@@ -136,12 +136,17 @@ double-claim-proof) — the standard Uniswap MerkleDistributor design.
   funds drain (a safety valve, not a backdoor — it can't redirect funds).
 - `Ownable2Step` so the operator key can be rotated/handed to a multisig safely.
 
-### Owner key
-The owner is a privileged operator (creates/funds/finalizes). **Strong
-recommendation: the owner is a Gnosis Safe multisig on Base**, not an EOA. The
-owner cannot steal claimable funds (it can only sweep *unclaimed* funds after
-the deadline, and can't rewrite a posted root), but it *does* decide the root —
-so multisig + a public, reproducible winners file is the integrity story.
+### Owner key (decided: Gnosis Safe multisig)
+The owner is a privileged operator (creates/funds/finalizes). **Decision: the
+owner is a Gnosis Safe multisig on Base**, not a single EOA. The owner cannot
+steal claimable funds (it can only sweep *unclaimed* funds after the deadline,
+and can't rewrite a posted root), but it *does* decide the root — so multisig +
+a public, reproducible winners file is the integrity story.
+
+Practical note: the Safe can be created at any time; for testnet dev we'll use a
+plain deployer key, then transfer ownership to the Safe (via `Ownable2Step`)
+before mainnet. **Open:** the Safe address + signer set (e.g. 2-of-3) — needed
+only at the mainnet ownership-transfer step, not to build/test.
 
 ## 6. Off-chain scoring & Merkle pipeline
 
@@ -151,12 +156,29 @@ A small script/Worker route, run once per season after the week closes:
 2. **Anti-cheat pass** (v1, operator-judgment): drop entries failing
    plausibility heuristics; optionally manually review the top N. (v1 accepts
    that this is operator-trusted; v2 adds replay verification, §10.)
-3. **Prize curve:** allocate the pool across the top N. Default proposal — a
-   capped, skewed split, e.g. top 10:
-   `35 / 20 / 12 / 8 / 6 / 5 / 5 / 3 / 3 / 3 (%)`. Configurable per season.
+3. **Prize curve (decided):** a capped, skewed top-10 split by percentage —
+   `35 / 20 / 12 / 8 / 6 / 5 / 5 / 3 / 3 / 3 (%)`. Percentages are configurable
+   per season; the curve is applied to whatever that season's pool is.
    Only **wallet-verified** entries (signed, address present) are eligible — an
    anonymous `Wolf-####` can't receive tokens, which also nudges wallet
-   connection.
+   connection. (If a season has fewer than 10 eligible finishers, the unfilled
+   tail stays unallocated and is swept back to treasury.)
+
+   **Season 1 (25,000 NIKO):**
+
+   | Rank | Share | NIKO   |
+   |------|-------|--------|
+   | 1    | 35%   | 8,750  |
+   | 2    | 20%   | 5,000  |
+   | 3    | 12%   | 3,000  |
+   | 4    | 8%    | 2,000  |
+   | 5    | 6%    | 1,500  |
+   | 6    | 5%    | 1,250  |
+   | 7    | 5%    | 1,250  |
+   | 8    | 3%    | 750    |
+   | 9    | 3%    | 750    |
+   | 10   | 3%    | 750    |
+   | **Total** | **100%** | **25,000** |
 4. Build the Merkle tree of `(index, address, amount)`; compute `allocated` =
    sum (≤ funded).
 5. **Publish the full winners file** (addresses, amounts, proofs) to the repo /
@@ -188,8 +210,10 @@ Base) and feature-flag pattern (`src/data/features.ts`).
 - Chain: **Base mainnet** (8453) — matches existing wallet integration. ✅
 - **$NIKO token contract:** `0x422273666D77F504E30E2573c063c7c50CCE8453` (Base).
   This is the ERC-20 the prize pool pays out and accepts as funding.
-- **Type:** standard **ERC-20**, **~1,000,000,000** total supply, paired against
-  **WETH**. ✅ (Confirmed by operator.)
+- **Type:** standard **ERC-20**, 1,000,000,000 minted total supply with
+  **~800,000,000 circulating** after burns, paired against **WETH**. ✅
+  (Confirmed by operator.) Season 1's 25,000 NIKO is ~0.003% of circulating —
+  a deliberately small, low-risk first pool.
 - **$NIKO/WETH liquidity pair:** `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`
   (Base). Not used by the contract; the **frontend** can read its reserves
   (NIKO vs WETH) × an ETH/USD feed to show the pool's value in USD.
@@ -227,17 +251,25 @@ Only after legal review **and** real anti-cheat:
 - Same finalize/claim payout machinery as v1 — the Solidity delta is small; the
   hard parts are anti-cheat and legal.
 
-## 11. Open inputs needed before implementation
+## 11. Decisions & remaining inputs
 
+Decided:
 1. ✅ **$NIKO contract:** `0x422273666D77F504E30E2573c063c7c50CCE8453` (Base);
    NIKO/WETH pair `0xA800F8F40aFe96C15EAb496C7194F84CaE486990`; standard ERC-20,
-   ~1B supply. `decimals` assumed 18, verified at first contract wiring (§8).
-2. ✅ Confirmed **plain ERC-20** (no fee-on-transfer / rebase / blacklist).
-3. **Owner key**: deploy under a Gnosis Safe multisig? (Strongly recommended.)
-4. **Prize curve & winner count** for season 1 (default in §6 is a starting
-   point).
-5. Funding source/amount for the first sponsored pool.
-6. Frontend read layer: OK to add **viem** for contract calls?
+   1B minted / ~800M circulating. `decimals` assumed 18, verified at first
+   contract wiring (§8).
+2. ✅ **Plain ERC-20** (no fee-on-transfer / rebase / blacklist).
+3. ✅ **Owner = Gnosis Safe multisig** (§5). Safe address/signer set supplied at
+   the mainnet ownership-transfer step.
+4. ✅ **Prize curve:** skewed top 10, `35/20/12/8/6/5/5/3/3/3 %` (§6).
+5. ✅ **Season 1 pool = 25,000 NIKO** (small/low-risk start).
+6. ✅ **Frontend read layer = viem** for contract reads + claim.
+
+Still needed only at mainnet-deploy time (not blockers for building/testing):
+- The Gnosis Safe address + signer threshold.
+- The treasury wallet that will fund the 25,000 NIKO.
+- A legal sanity-check for target markets (sponsored/free-entry keeps this low,
+  but still worth a look — §9).
 
 ## 12. Implementation plan (once signed off)
 
