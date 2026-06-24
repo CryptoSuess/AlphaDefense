@@ -52,6 +52,7 @@ contract NikoPrizePool is Ownable2Step, Pausable, ReentrancyGuard {
     event SeasonCreated(uint256 indexed id, string weekKey);
     event SeasonFunded(uint256 indexed id, address indexed from, uint256 amount, uint256 totalFunded);
     event SeasonFinalized(uint256 indexed id, bytes32 merkleRoot, uint256 allocated, uint64 claimDeadline);
+    event ClaimDeadlineExtended(uint256 indexed id, uint64 newDeadline);
     event Claimed(uint256 indexed id, uint256 index, address indexed account, uint256 amount);
     event Swept(uint256 indexed id, address indexed to, uint256 amount);
 
@@ -67,6 +68,7 @@ contract NikoPrizePool is Ownable2Step, Pausable, ReentrancyGuard {
     error AlreadyClaimed();
     error InvalidProof();
     error AlreadySwept();
+    error EmptyRoot();
 
     /**
      * @param token_ The $NIKO ERC-20.
@@ -113,6 +115,7 @@ contract NikoPrizePool is Ownable2Step, Pausable, ReentrancyGuard {
         Season storage s = seasons[id];
         if (!seasonExists[id]) revert SeasonNotFound();
         if (s.finalized) revert AlreadyFinalized();
+        if (merkleRoot == bytes32(0)) revert EmptyRoot();
         if (allocated > s.funded) revert AllocationExceedsFunded();
         if (claimDeadline <= block.timestamp) revert InvalidDeadline();
         s.merkleRoot = merkleRoot;
@@ -122,8 +125,25 @@ contract NikoPrizePool is Ownable2Step, Pausable, ReentrancyGuard {
         emit SeasonFinalized(id, merkleRoot, allocated, claimDeadline);
     }
 
+    /**
+     * @notice Extends a season's claim deadline. Forward-only: it can never
+     * shorten the window or revive a swept season, so it can only ever give
+     * winners MORE time — never a path to deny or claw back a claim. Intended
+     * remediation if claims were disrupted (e.g. paused during an incident).
+     */
+    function extendClaimDeadline(uint256 id, uint64 newDeadline) external onlyOwner {
+        Season storage s = seasons[id];
+        if (!s.finalized) revert NotFinalized();
+        if (s.swept) revert AlreadySwept();
+        if (newDeadline <= s.claimDeadline) revert InvalidDeadline();
+        s.claimDeadline = newDeadline;
+        emit ClaimDeadlineExtended(id, newDeadline);
+    }
+
     /// @notice Returns funds not claimed by the deadline to the owner (treasury).
-    function sweepUnclaimed(uint256 id) external onlyOwner nonReentrant {
+    /// @dev `whenNotPaused`: funds cannot be swept out while claims are halted,
+    /// so a pause can't be used to drain the pool out from under winners.
+    function sweepUnclaimed(uint256 id) external onlyOwner nonReentrant whenNotPaused {
         Season storage s = seasons[id];
         if (!s.finalized) revert NotFinalized();
         if (block.timestamp <= s.claimDeadline) revert ClaimWindowOpen();
@@ -164,6 +184,13 @@ contract NikoPrizePool is Ownable2Step, Pausable, ReentrancyGuard {
 
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(index, account, amount))));
         if (!MerkleProof.verify(proof, s.merkleRoot, leaf)) revert InvalidProof();
+
+        // Defense in depth: `allocated` is operator-supplied at finalize and is
+        // NOT cryptographically tied to the root. Cap total claims at `allocated`
+        // (<= funded) so a root whose leaf-sum exceeds the season's funds can
+        // never let claims drain another season's deposits from the shared
+        // balance. Honest off-chain pipelines set allocated == sum(leaf amounts).
+        if (s.claimed + amount > s.allocated) revert AllocationExceedsFunded();
 
         _setClaimed(id, index);
         s.claimed += amount;

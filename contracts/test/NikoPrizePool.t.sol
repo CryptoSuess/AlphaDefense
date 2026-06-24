@@ -179,6 +179,67 @@ contract NikoPrizePoolTest is Test {
         pool.sweepUnclaimed(SEASON);
     }
 
+    function test_Claim_ExceedsAllocated_Reverts() public {
+        // Operator under-reports allocated (13,750) while the posted root commits
+        // more (18,750). Claims are capped at allocated; the over-committing claim
+        // reverts instead of dipping into other funds.
+        uint256 underAllocated = a0 + a1; // 13,750 < real leaf-sum 18,750
+        pool.createSeason(SEASON, WEEK);
+        pool.fundSeason(SEASON, FUNDED);
+        pool.finalizeSeason(SEASON, root, underAllocated, uint64(block.timestamp + 7 days));
+
+        pool.claim(SEASON, 0, w0, a0, _proof(0)); // 8,750 -> claimed 8,750
+        pool.claim(SEASON, 1, w1, a1, _proof(1)); // 5,000 -> claimed 13,750 == allocated
+        vm.expectRevert(NikoPrizePool.AllocationExceedsFunded.selector);
+        pool.claim(SEASON, 2, w2, a2, _proof(2)); // would push claimed to 16,750
+    }
+
+    function test_Finalize_ZeroRoot_Reverts() public {
+        pool.createSeason(SEASON, WEEK);
+        pool.fundSeason(SEASON, FUNDED);
+        vm.expectRevert(NikoPrizePool.EmptyRoot.selector);
+        pool.finalizeSeason(SEASON, bytes32(0), a0, uint64(block.timestamp + 7 days));
+    }
+
+    function test_ExtendClaimDeadline_GivesWinnersMoreTime() public {
+        _createFundFinalize(a0 + a1 + a2 + a3);
+        uint64 newDeadline = uint64(block.timestamp + 30 days);
+        pool.extendClaimDeadline(SEASON, newDeadline);
+        (, , , uint64 deadline, , , , ) = pool.seasons(SEASON);
+        assertEq(deadline, newDeadline);
+
+        // A claim that would have been past the original 7-day window now works.
+        vm.warp(block.timestamp + 8 days);
+        pool.claim(SEASON, 0, w0, a0, _proof(0));
+        assertEq(token.balanceOf(w0), a0);
+    }
+
+    function test_ExtendClaimDeadline_ForwardOnly_Reverts() public {
+        _createFundFinalize(a0 + a1 + a2 + a3);
+        (, , , uint64 deadline, , , , ) = pool.seasons(SEASON);
+        vm.expectRevert(NikoPrizePool.InvalidDeadline.selector);
+        pool.extendClaimDeadline(SEASON, deadline); // not strictly greater
+    }
+
+    function test_ExtendClaimDeadline_AfterSweep_Reverts() public {
+        _createFundFinalize(a0 + a1 + a2 + a3);
+        vm.warp(block.timestamp + 8 days);
+        pool.sweepUnclaimed(SEASON);
+        vm.expectRevert(NikoPrizePool.AlreadySwept.selector);
+        pool.extendClaimDeadline(SEASON, uint64(block.timestamp + 7 days));
+    }
+
+    function test_Sweep_WhilePaused_Reverts() public {
+        // A pause can't be used to drain the pool out from under winners.
+        _createFundFinalize(a0 + a1 + a2 + a3);
+        vm.warp(block.timestamp + 8 days);
+        pool.pause();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        pool.sweepUnclaimed(SEASON);
+        pool.unpause();
+        pool.sweepUnclaimed(SEASON); // succeeds once claims are live again
+    }
+
     function test_FundAfterFinalize_Reverts() public {
         _createFundFinalize(a0 + a1 + a2 + a3);
         vm.expectRevert(NikoPrizePool.AlreadyFinalized.selector);
@@ -204,6 +265,8 @@ contract NikoPrizePoolTest is Test {
         pool.fundSeason(SEASON, 1 ether);
         vm.expectRevert(abi.encodeWithSelector(sel, attacker));
         pool.finalizeSeason(SEASON, root, a0, uint64(block.timestamp + 1 days));
+        vm.expectRevert(abi.encodeWithSelector(sel, attacker));
+        pool.extendClaimDeadline(SEASON, uint64(block.timestamp + 1 days));
         vm.expectRevert(abi.encodeWithSelector(sel, attacker));
         pool.sweepUnclaimed(SEASON);
         vm.expectRevert(abi.encodeWithSelector(sel, attacker));

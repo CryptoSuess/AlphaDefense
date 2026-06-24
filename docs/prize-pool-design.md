@@ -90,12 +90,13 @@ contract NikoPrizePool {
     IERC20 public immutable token;        // $NIKO on Base (set at deploy)
 
     struct Season {
-        uint128 funded;        // total $NIKO deposited
-        uint128 allocated;     // total promised by the merkle root
-        uint128 claimed;       // total claimed so far
+        uint256 funded;        // total $NIKO deposited
+        uint256 allocated;     // total promised by the merkle root
+        uint256 claimed;       // total claimed so far
         uint64  claimDeadline; // unix; 0 until finalized
+        bool    finalized;     // root posted; funding locked
+        bool    swept;         // leftover returned to owner
         bytes32 merkleRoot;    // 0x0 until finalized
-        bool    swept;
         string  weekKey;       // e.g. "2026-W26" (for indexing/UX)
     }
 
@@ -105,8 +106,9 @@ contract NikoPrizePool {
     // --- owner / operator ---
     function createSeason(uint256 id, string calldata weekKey) external onlyOwner;
     function fundSeason(uint256 id, uint256 amount) external onlyOwner;       // pulls token via transferFrom
-    function finalizeSeason(uint256 id, bytes32 root, uint256 allocated, uint64 claimDeadline) external onlyOwner; // one-shot; allocated <= funded
-    function sweepUnclaimed(uint256 id) external onlyOwner;                   // only after deadline
+    function finalizeSeason(uint256 id, bytes32 root, uint256 allocated, uint64 claimDeadline) external onlyOwner; // one-shot; allocated <= funded; root != 0
+    function extendClaimDeadline(uint256 id, uint64 newDeadline) external onlyOwner; // forward-only; gives winners more time
+    function sweepUnclaimed(uint256 id) external onlyOwner whenNotPaused;     // only after deadline; not while paused
     function pause() / unpause() external onlyOwner;
 
     // --- players ---
@@ -122,19 +124,39 @@ contract NikoPrizePool {
 }
 ```
 
-**Merkle leaf:** `keccak256(abi.encodePacked(index, account, amount))`. The
-`index` gives each winner a unique slot tracked in a bitmap (cheap,
-double-claim-proof) — the standard Uniswap MerkleDistributor design.
+**Merkle leaf:** the OpenZeppelin StandardMerkleTree encoding —
+`keccak256(bytes.concat(keccak256(abi.encode(index, account, amount))))`. The
+double hash and fixed-length `abi.encode` (not `encodePacked`) prevent
+second-preimage attacks; the `index` gives each winner a unique slot tracked in
+a bitmap (cheap, double-claim-proof) — the Uniswap MerkleDistributor design with
+OZ's hardened leaf.
 
 ### Key invariants / guards
 - `finalizeSeason` requires `allocated <= funded` (can't promise more than is in
-  the pool) and `merkleRoot == 0` beforehand (one-shot, no swaps).
-- `claim` checks proof, marks the bitmap bit, increments `claimed`, then
-  `SafeERC20.safeTransfer` (effects-before-interaction + `nonReentrant`).
-- `sweepUnclaimed` only after `claimDeadline`, transfers `funded - claimed`.
+  the pool), `merkleRoot != 0`, and not-yet-finalized (one-shot, no root swaps).
+- `claim` checks proof, **caps total claims at `allocated`** (defense in depth —
+  `allocated` is operator-supplied and not bound to the root, so this stops a
+  mis-built root from draining the shared balance), marks the bitmap bit,
+  increments `claimed`, then `SafeERC20.safeTransfer` (effects-before-interaction
+  + `nonReentrant`).
+- `sweepUnclaimed` only after `claimDeadline` **and only while not paused**
+  (a pause can't be used to run out the clock and sweep funds out from under
+  winners), transfers `funded - claimed`.
+- `extendClaimDeadline` is **forward-only** and blocked once swept, so it can
+  only ever grant winners more time — the operator's remediation path if claims
+  were disrupted (e.g. paused during an incident).
 - `Pausable` lets us halt claims if a problem with the root is discovered before
   funds drain (a safety valve, not a backdoor — it can't redirect funds).
 - `Ownable2Step` so the operator key can be rotated/handed to a multisig safely.
+
+### Residual centralization (accepted for v1)
+The operator still decides the root, and with `pause` + `extendClaimDeadline` it
+controls *when* claims are live. It can never take a claimable allocation, swap a
+finalized root, or sweep while paused — but a malicious operator could refuse to
+extend a disrupted window. This is the same trust already placed in operator
+scoring (§2), mitigated by the Gnosis Safe multisig + public winners file. v2's
+trustless path (§10) is the real fix; for a sponsored, free-entry v1 it is
+acceptable.
 
 ### Owner key (decided: Gnosis Safe multisig)
 The owner is a privileged operator (creates/funds/finalizes). **Decision: the
