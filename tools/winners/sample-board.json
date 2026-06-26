@@ -1,0 +1,18 @@
+{
+  "key": "weekly:2026-W26",
+  "entries": [
+    { "player": "DiamondPaw", "score": 98200, "wave": 30, "address": "0x1111111111111111111111111111111111111111", "ts": 1750000000000 },
+    { "player": "WhaleHunter", "score": 91500, "wave": 28, "address": "0x2222222222222222222222222222222222222222", "ts": 1750000100000 },
+    { "player": "Wolf-4823", "score": 90000, "wave": 27, "ts": 1750000200000 },
+    { "player": "BlueFlame", "score": 80300, "wave": 26, "address": "0x3333333333333333333333333333333333333333", "ts": 1750000300000 },
+    { "player": "HowlCannon", "score": 72100, "wave": 24, "address": "0x4444444444444444444444444444444444444444", "ts": 1750000400000 },
+    { "player": "PackScout", "score": 65000, "wave": 22, "address": "0x5555555555555555555555555555555555555555", "ts": 1750000500000 },
+    { "player": "DiamondPaw-alt", "score": 60000, "wave": 20, "address": "0x1111111111111111111111111111111111111111", "ts": 1750000600000 },
+    { "player": "YieldDen", "score": 51000, "wave": 18, "address": "0x6666666666666666666666666666666666666666", "ts": 1750000700000 },
+    { "player": "Wolf-1099", "score": 48000, "wave": 17, "ts": 1750000800000 },
+    { "player": "RugPuller", "score": 44000, "wave": 16, "address": "0x7777777777777777777777777777777777777777", "ts": 1750000900000 },
+    { "player": "BaseChad", "score": 40000, "wave": 15, "address": "0x8888888888888888888888888888888888888888", "ts": 1750001000000 },
+    { "player": "GmFren", "score": 36000, "wave": 14, "address": "0x9999999999999999999999999999999999999999", "ts": 1750001100000 },
+    { "player": "Apefolio", "score": 30000, "wave": 13, "address": "0xaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAA", "ts": 1750001200000 }
+  ]
+}
