@@ -39,21 +39,67 @@ that host is blocked, point Foundry at a local compiler:
 forge test --use /path/to/solc        # e.g. a solc 0.8.24 binary
 ```
 
-## Deploy (Base Sepolia first)
+## Base Sepolia walkthrough (testnet)
+
+Real $NIKO isn't on Sepolia, so the testnet deploy ships a mock token (its
+`mint` is a public faucet) alongside the pool. Copy `.env.example` to `.env`
+and fill in `BASE_SEPOLIA_RPC`, a throwaway `PRIVATE_KEY` (funded with Sepolia
+ETH), and optionally `BASESCAN_API_KEY` for verification.
+
+```bash
+# 1. Deploy mock token + pool (owner = deployer) and (optionally) verify.
+forge script script/DeployTestnet.s.sol:DeployTestnet \
+  --rpc-url base_sepolia --broadcast --verify --use ~/bin/solc \
+  --private-key "$PRIVATE_KEY"
+# -> prints MockERC20 and NikoPrizePool addresses. Export them:
+export TOKEN=0x...   POOL=0x...
+
+# 2. Build the winner set off-chain (see ../tools/winners). For a dry run:
+#    cd ../tools/winners && node build-winners.mjs --week 2026-W26 --pool 25000 \
+#      --season 1 --deadline-days 30 --file sample-board.json
+#    -> prints merkleRoot + allocated; writes winners-<week>.json.
+
+# 3. Operator: create + fund the season, then finalize with the root.
+cast send "$POOL" "createSeason(uint256,string)" 1 "2026-W26" \
+  --rpc-url base_sepolia --private-key "$PRIVATE_KEY"
+cast send "$TOKEN" "approve(address,uint256)" "$POOL" \
+  25000000000000000000000 --rpc-url base_sepolia --private-key "$PRIVATE_KEY"
+cast send "$POOL" "fundSeason(uint256,uint256)" 1 25000000000000000000000 \
+  --rpc-url base_sepolia --private-key "$PRIVATE_KEY"
+cast send "$POOL" "finalizeSeason(uint256,bytes32,uint256,uint64)" \
+  1 "$ROOT" "$ALLOCATED" "$DEADLINE" --rpc-url base_sepolia --private-key "$PRIVATE_KEY"
+
+# 4. Anyone submits a winner's claim (funds go to the winner address). The
+#    index/account/amount/proof come from winners-<week>.json.
+cast send "$POOL" "claim(uint256,uint256,address,uint256,bytes32[])" \
+  1 0 "$WINNER" "$AMOUNT" "[$PROOF_ELEMS]" --rpc-url base_sepolia --private-key "$PRIVATE_KEY"
+
+# 5. After the deadline, operator sweeps the unclaimed remainder.
+cast send "$POOL" "sweepUnclaimed(uint256)" 1 \
+  --rpc-url base_sepolia --private-key "$PRIVATE_KEY"
+```
+
+`test/Integration.t.sol` runs this entire loop in-process against the actual
+pipeline output (`test/fixtures/winners-sample.json`) — a fast, RPC-free check
+that the off-chain root and proofs are consumable on-chain before you spend
+testnet gas.
+
+## Deploy (mainnet)
 
 ```bash
 export NIKO_TOKEN=0x422273666D77F504E30E2573c063c7c50CCE8453   # $NIKO on Base
 export POOL_OWNER=0xYourSafeOrDeployer
-forge script script/Deploy.s.sol:Deploy --rpc-url "$RPC" --broadcast --use /path/to/solc
+forge script script/Deploy.s.sol:Deploy --rpc-url base --broadcast --use /path/to/solc
 ```
 
-For mainnet, deploy with a deployer key then transfer ownership to the Gnosis
-Safe via `transferOwnership` / `acceptOwnership` (`Ownable2Step`).
+Deploy with a deployer key, then transfer ownership to the Gnosis Safe via
+`transferOwnership` / `acceptOwnership` (`Ownable2Step`).
 
 ## Off-chain winners tree
 
-Build the Merkle tree with the OpenZeppelin `merkle-tree` JS library using the
-leaf encoding `["uint256","address","uint256"]` => `(index, account, amount)`.
-The on-chain leaf is `keccak256(bytes.concat(keccak256(abi.encode(index, account, amount))))`.
-Publish the full winners file (addresses, amounts, proofs) so anyone can verify
-the root and self-serve their proof.
+The winner set / Merkle tree is built by [`../tools/winners`](../tools/winners)
+using the OpenZeppelin `merkle-tree` library with leaf encoding
+`["uint256","address","uint256"]` => `(index, account, amount)`. The on-chain
+leaf is `keccak256(bytes.concat(keccak256(abi.encode(index, account, amount))))`.
+That tool publishes the full winners file (addresses, amounts, proofs) so anyone
+can verify the root and self-serve their proof.
