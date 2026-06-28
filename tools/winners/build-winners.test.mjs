@@ -9,6 +9,7 @@ import {
   selectEligible,
   allocate,
   toBaseUnits,
+  validateCurve,
   DEFAULT_CURVE,
 } from './lib.mjs';
 
@@ -82,6 +83,19 @@ test('fewer eligible than curve length -> only that many winners', () => {
   assert.equal(r.winnerCount, 3);
   // With only 3 winners the tail (ranks 4-10) is unallocated and swept.
   assert.ok(BigInt(r.allocated) < BigInt(r.poolBase));
+});
+
+test('the default curve is valid and sums to 100%', () => {
+  assert.equal(validateCurve(DEFAULT_CURVE), 100);
+});
+
+test('rejects a curve that sums to more than 100%', () => {
+  assert.throws(() => buildWinners({ entries: board, week: 'x', pool: POOL, curve: [60, 60] }), /100%/);
+});
+
+test('rejects a non-numeric / negative curve entry', () => {
+  assert.throws(() => validateCurve([50, Number('abc')]), /invalid curve/);
+  assert.throws(() => validateCurve([50, -10]), /invalid curve/);
 });
 
 test('allocate floors so the sum stays within the pool (rounding dust)', () => {

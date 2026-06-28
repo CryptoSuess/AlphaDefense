@@ -48,6 +48,26 @@ export function selectEligible(entries) {
 }
 
 /**
+ * Validates a prize curve: every entry must be a finite, non-negative percentage
+ * and the total must not exceed 100% (or the allocation would exceed the pool —
+ * the contract would reject the finalize, wasting an operator tx). Returns the
+ * sum. Throws a clear error rather than letting a bad `--curve` produce a silent
+ * over-allocation or an opaque BigInt(NaN).
+ */
+export function validateCurve(curve) {
+  if (!Array.isArray(curve) || curve.length === 0) throw new Error('curve must be a non-empty list');
+  let sum = 0;
+  for (const p of curve) {
+    if (!Number.isFinite(p) || p < 0) throw new Error(`invalid curve percentage: ${p}`);
+    sum += p;
+  }
+  if (sum > 100 + 1e-9) {
+    throw new Error(`curve percentages sum to ${sum}% (> 100%); allocation would exceed the pool`);
+  }
+  return sum;
+}
+
+/**
  * Allocates base-unit amounts to the top `count` ranks per the curve.
  * Integer math throughout (BigInt); each amount is floored, so the sum is always
  * <= the pool and the rounding dust stays unallocated (swept back to treasury,
@@ -95,6 +115,7 @@ export function buildWinners({
   season,
   claimDeadline,
 }) {
+  validateCurve(curve);
   const poolBase = toBaseUnits(pool, decimals);
   const eligible = selectEligible(entries);
   const amounts = allocate(poolBase, curve, eligible.length);

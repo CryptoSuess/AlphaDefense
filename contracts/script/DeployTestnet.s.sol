@@ -20,6 +20,11 @@ import {MockERC20} from "../test/mocks/MockERC20.sol";
  */
 contract DeployTestnet is Script {
     function run() external returns (NikoPrizePool pool, MockERC20 token) {
+        // Guard against an accidental mainnet run (Ethereum L1 or Base). The
+        // mock token has a public mint and is for testing only — mainnet must
+        // go through Deploy.s.sol with the real $NIKO.
+        require(block.chainid != 1 && block.chainid != 8453, "DeployTestnet: refusing to run on mainnet");
+
         vm.startBroadcast();
         address deployer = msg.sender;
         token = new MockERC20(); // mints 1B test NIKO to the deployer
