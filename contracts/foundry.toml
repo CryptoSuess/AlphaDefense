@@ -10,6 +10,16 @@ remappings = [
     "forge-std/=lib/forge-std/src/",
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
 ]
+# Lets the integration test read the committed winners fixture (vm.readFile).
+fs_permissions = [{ access = "read", path = "./test/fixtures" }]
+
+[rpc_endpoints]
+base_sepolia = "${BASE_SEPOLIA_RPC}"
+base = "${BASE_RPC}"
+
+[etherscan]
+base_sepolia = { key = "${BASESCAN_API_KEY}", chain = 84532, url = "https://api-sepolia.basescan.org/api" }
+base = { key = "${BASESCAN_API_KEY}", chain = 8453, url = "https://api.basescan.org/api" }
 
 # Notes:
 # - solc_version pins the compiler; standard Foundry setups download it via svm.

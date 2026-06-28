@@ -1,0 +1,17 @@
+{
+  "name": "niko-winners-pipeline",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Off-chain winners -> Merkle tree pipeline for the NIKO prize pool.",
+  "scripts": {
+    "build": "node build-winners.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@openzeppelin/merkle-tree": "^1.0.7"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

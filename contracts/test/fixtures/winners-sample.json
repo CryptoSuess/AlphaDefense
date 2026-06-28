@@ -1,0 +1,281 @@
+{
+  "week": "sample",
+  "season": 1,
+  "token": "0x422273666D77F504E30E2573c063c7c50CCE8453",
+  "decimals": 18,
+  "pool": "25000",
+  "poolBase": "25000000000000000000000",
+  "merkleRoot": "0xcc9c1faba3499e0bb4c71fd81c6e7d70060c43817f754e3a5c56e44723b6652e",
+  "allocated": "25000000000000000000000",
+  "allocatedFormatted": "25000",
+  "eligibleCount": 10,
+  "winnerCount": 10,
+  "claimDeadline": null,
+  "winners": [
+    {
+      "index": 0,
+      "rank": 1,
+      "address": "0x1111111111111111111111111111111111111111",
+      "player": "DiamondPaw",
+      "score": 98200,
+      "wave": 30,
+      "amount": "8750000000000000000000",
+      "amountFormatted": "8750",
+      "proof": [
+        "0x841a6421e621ef886362e9f8062ca4b8998fe1ed43f92e41749197584667ddda",
+        "0x6341c828c89a458ea782a5be368dca0167d18f1f8eb062a0c22e35f3bb995828",
+        "0x72a83ff8f030fee4426da6135891ceeea55c42b6d1c558f3e3a8a888b7d0a992"
+      ]
+    },
+    {
+      "index": 1,
+      "rank": 2,
+      "address": "0x2222222222222222222222222222222222222222",
+      "player": "WhaleHunter",
+      "score": 91500,
+      "wave": 28,
+      "amount": "5000000000000000000000",
+      "amountFormatted": "5000",
+      "proof": [
+        "0x5aabad544531498db10bf25b91a7db590a68f84a6311762b92415fe435946e72",
+        "0x1548fb414a2d4e2b216c50b26b061a7b1a5201ed968e29f6eecfc7baa5ee0f76",
+        "0xae9cc64d4415f16722b4058152df593c4ffa902be4c51213c72d485e99bd1431",
+        "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873"
+      ]
+    },
+    {
+      "index": 2,
+      "rank": 3,
+      "address": "0x3333333333333333333333333333333333333333",
+      "player": "BlueFlame",
+      "score": 80300,
+      "wave": 26,
+      "amount": "3000000000000000000000",
+      "amountFormatted": "3000",
+      "proof": [
+        "0x9328eafe2f778e7bffd2a26e0cf52fcde94ece27a8288486ecd91ee28b297011",
+        "0xda7ea35a2bc85c2fcd380a864a08073a41cfab1807cefab351aa90cd6f341be2",
+        "0x72a83ff8f030fee4426da6135891ceeea55c42b6d1c558f3e3a8a888b7d0a992"
+      ]
+    },
+    {
+      "index": 3,
+      "rank": 4,
+      "address": "0x4444444444444444444444444444444444444444",
+      "player": "HowlCannon",
+      "score": 72100,
+      "wave": 24,
+      "amount": "2000000000000000000000",
+      "amountFormatted": "2000",
+      "proof": [
+        "0x6970f0b6084a5fe8502431801b69ccdd40d63ef555ea91a341a1338289819c80",
+        "0x6341c828c89a458ea782a5be368dca0167d18f1f8eb062a0c22e35f3bb995828",
+        "0x72a83ff8f030fee4426da6135891ceeea55c42b6d1c558f3e3a8a888b7d0a992"
+      ]
+    },
+    {
+      "index": 4,
+      "rank": 5,
+      "address": "0x5555555555555555555555555555555555555555",
+      "player": "PackScout",
+      "score": 65000,
+      "wave": 22,
+      "amount": "1500000000000000000000",
+      "amountFormatted": "1500",
+      "proof": [
+        "0x392ab45ce9fceeee3bf97ce1f56e4b88c58d89249ed15c3967382f0c6074e5a1",
+        "0x02242186790c1235ad0b20f100350b6a11915115c75203ba07d65926bd790ac9",
+        "0xae9cc64d4415f16722b4058152df593c4ffa902be4c51213c72d485e99bd1431",
+        "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873"
+      ]
+    },
+    {
+      "index": 5,
+      "rank": 6,
+      "address": "0x6666666666666666666666666666666666666666",
+      "player": "YieldDen",
+      "score": 51000,
+      "wave": 18,
+      "amount": "1250000000000000000000",
+      "amountFormatted": "1250",
+      "proof": [
+        "0xa797d56f5f17725282d2c28fd00534b5db7dbff02e29abc1a635ce9e56a12ccc",
+        "0x8a04ae97b0387adba478b2f1e78feb736ef8042c6c1fb5e55a505e3744ad3c25",
+        "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873"
+      ]
+    },
+    {
+      "index": 6,
+      "rank": 7,
+      "address": "0x7777777777777777777777777777777777777777",
+      "player": "RugPuller",
+      "score": 44000,
+      "wave": 16,
+      "amount": "1250000000000000000000",
+      "amountFormatted": "1250",
+      "proof": [
+        "0x3b833d74bf7f533fd97f58f4a0d74b7cfd00815a1104b85a0499ad712a12f3cf",
+        "0x1548fb414a2d4e2b216c50b26b061a7b1a5201ed968e29f6eecfc7baa5ee0f76",
+        "0xae9cc64d4415f16722b4058152df593c4ffa902be4c51213c72d485e99bd1431",
+        "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873"
+      ]
+    },
+    {
+      "index": 7,
+      "rank": 8,
+      "address": "0x8888888888888888888888888888888888888888",
+      "player": "BaseChad",
+      "score": 40000,
+      "wave": 15,
+      "amount": "750000000000000000000",
+      "amountFormatted": "750",
+      "proof": [
+        "0x287d621a7d86b296c14dbdfb8b5898567a85f27a34acf1892d6c7669da24d91d",
+        "0x02242186790c1235ad0b20f100350b6a11915115c75203ba07d65926bd790ac9",
+        "0xae9cc64d4415f16722b4058152df593c4ffa902be4c51213c72d485e99bd1431",
+        "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873"
+      ]
+    },
+    {
+      "index": 8,
+      "rank": 9,
+      "address": "0x9999999999999999999999999999999999999999",
+      "player": "GmFren",
+      "score": 36000,
+      "wave": 14,
+      "amount": "750000000000000000000",
+      "amountFormatted": "750",
+      "proof": [
+        "0xb6527ee7e021d27b118c0aa165772a575beb9ffefdf0c6fe159e9a89d27580aa",
+        "0x8a04ae97b0387adba478b2f1e78feb736ef8042c6c1fb5e55a505e3744ad3c25",
+        "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873"
+      ]
+    },
+    {
+      "index": 9,
+      "rank": 10,
+      "address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "player": "Apefolio",
+      "score": 30000,
+      "wave": 13,
+      "amount": "750000000000000000000",
+      "amountFormatted": "750",
+      "proof": [
+        "0xa4d1358c3b4792405bc5fcb97331a542fb52a0f0a119f725e65ddc49980be5a3",
+        "0xda7ea35a2bc85c2fcd380a864a08073a41cfab1807cefab351aa90cd6f341be2",
+        "0x72a83ff8f030fee4426da6135891ceeea55c42b6d1c558f3e3a8a888b7d0a992"
+      ]
+    }
+  ],
+  "tree": {
+    "format": "standard-v1",
+    "leafEncoding": [
+      "uint256",
+      "address",
+      "uint256"
+    ],
+    "tree": [
+      "0xcc9c1faba3499e0bb4c71fd81c6e7d70060c43817f754e3a5c56e44723b6652e",
+      "0x72a83ff8f030fee4426da6135891ceeea55c42b6d1c558f3e3a8a888b7d0a992",
+      "0xce5af5e1a7f97246e9f34d7ec521307b72155e0e68cc71910305e5346c34a873",
+      "0x8a04ae97b0387adba478b2f1e78feb736ef8042c6c1fb5e55a505e3744ad3c25",
+      "0xae9cc64d4415f16722b4058152df593c4ffa902be4c51213c72d485e99bd1431",
+      "0x6341c828c89a458ea782a5be368dca0167d18f1f8eb062a0c22e35f3bb995828",
+      "0xda7ea35a2bc85c2fcd380a864a08073a41cfab1807cefab351aa90cd6f341be2",
+      "0x02242186790c1235ad0b20f100350b6a11915115c75203ba07d65926bd790ac9",
+      "0x1548fb414a2d4e2b216c50b26b061a7b1a5201ed968e29f6eecfc7baa5ee0f76",
+      "0xb6527ee7e021d27b118c0aa165772a575beb9ffefdf0c6fe159e9a89d27580aa",
+      "0xa797d56f5f17725282d2c28fd00534b5db7dbff02e29abc1a635ce9e56a12ccc",
+      "0xa4d1358c3b4792405bc5fcb97331a542fb52a0f0a119f725e65ddc49980be5a3",
+      "0x9328eafe2f778e7bffd2a26e0cf52fcde94ece27a8288486ecd91ee28b297011",
+      "0x841a6421e621ef886362e9f8062ca4b8998fe1ed43f92e41749197584667ddda",
+      "0x6970f0b6084a5fe8502431801b69ccdd40d63ef555ea91a341a1338289819c80",
+      "0x5aabad544531498db10bf25b91a7db590a68f84a6311762b92415fe435946e72",
+      "0x3b833d74bf7f533fd97f58f4a0d74b7cfd00815a1104b85a0499ad712a12f3cf",
+      "0x392ab45ce9fceeee3bf97ce1f56e4b88c58d89249ed15c3967382f0c6074e5a1",
+      "0x287d621a7d86b296c14dbdfb8b5898567a85f27a34acf1892d6c7669da24d91d"
+    ],
+    "values": [
+      {
+        "value": [
+          "0",
+          "0x1111111111111111111111111111111111111111",
+          "8750000000000000000000"
+        ],
+        "treeIndex": 14
+      },
+      {
+        "value": [
+          "1",
+          "0x2222222222222222222222222222222222222222",
+          "5000000000000000000000"
+        ],
+        "treeIndex": 16
+      },
+      {
+        "value": [
+          "2",
+          "0x3333333333333333333333333333333333333333",
+          "3000000000000000000000"
+        ],
+        "treeIndex": 11
+      },
+      {
+        "value": [
+          "3",
+          "0x4444444444444444444444444444444444444444",
+          "2000000000000000000000"
+        ],
+        "treeIndex": 13
+      },
+      {
+        "value": [
+          "4",
+          "0x5555555555555555555555555555555555555555",
+          "1500000000000000000000"
+        ],
+        "treeIndex": 18
+      },
+      {
+        "value": [
+          "5",
+          "0x6666666666666666666666666666666666666666",
+          "1250000000000000000000"
+        ],
+        "treeIndex": 9
+      },
+      {
+        "value": [
+          "6",
+          "0x7777777777777777777777777777777777777777",
+          "1250000000000000000000"
+        ],
+        "treeIndex": 15
+      },
+      {
+        "value": [
+          "7",
+          "0x8888888888888888888888888888888888888888",
+          "750000000000000000000"
+        ],
+        "treeIndex": 17
+      },
+      {
+        "value": [
+          "8",
+          "0x9999999999999999999999999999999999999999",
+          "750000000000000000000"
+        ],
+        "treeIndex": 10
+      },
+      {
+        "value": [
+          "9",
+          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "750000000000000000000"
+        ],
+        "treeIndex": 12
+      }
+    ]
+  }
+}

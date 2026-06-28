@@ -5,3 +5,6 @@ broadcast/
 
 # Vendored dependencies (fetch with ./setup.sh)
 lib/
+
+# Local secrets / deploy config
+.env
